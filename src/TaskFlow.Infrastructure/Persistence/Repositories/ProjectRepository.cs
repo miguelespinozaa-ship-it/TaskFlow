@@ -7,6 +7,8 @@ namespace TaskFlow.Infrastructure.Persistence.Repositories;
 
 internal sealed class ProjectRepository(AppDbContext db) : IProjectRepository
 {
+    public void Add(Project project) => db.Projects.Add(project);
+
     public Task<Project?> GetByIdAsync(Guid id, CancellationToken ct) =>
         db.Projects.FirstOrDefaultAsync(p => p.Id == id, ct);
 

@@ -1,22 +1,43 @@
 using System.Linq.Expressions;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using TaskFlow.Application.Abstractions;
 using TaskFlow.Domain.Common;
 using TaskFlow.Domain.Projects;
 using TaskFlow.Domain.Tasks;
 using TaskFlow.Domain.Workspaces;
+using TaskFlow.Infrastructure.Identity;
 
 namespace TaskFlow.Infrastructure.Persistence;
 
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options), IUnitOfWork
+// IdentityUserContext (y no IdentityDbContext): los roles son POR WORKSPACE (workspace_members),
+// no globales, así que las tablas de roles de Identity no se usan.
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext? tenant = null)
+    : IdentityUserContext<ApplicationUser, Guid>(options), IUnitOfWork
 {
-    // Lo va a setear el TenantResolutionMiddleware en cada request (fase 2). NULL = contexto
-    // de sistema (background jobs, seed, migraciones) donde el filtro NO se aplica.
-    public Guid? CurrentWorkspaceId { get; set; }
+    private Guid? _workspaceOverride;
+    private bool _hasOverride;
+
+    /// <summary>
+    /// Workspace activo: por defecto el que resolvió TenantResolutionMiddleware para este request.
+    /// NULL = contexto de sistema (seed, jobs, migraciones) donde el filtro NO se aplica.
+    /// Se puede fijar a mano (tests, jobs que operan sobre un tenant concreto).
+    /// </summary>
+    public Guid? CurrentWorkspaceId
+    {
+        get => _hasOverride ? _workspaceOverride : tenant?.WorkspaceId;
+        set
+        {
+            _workspaceOverride = value;
+            _hasOverride = true;
+        }
+    }
 
     public DbSet<Workspace> Workspaces => Set<Workspace>();
+    public DbSet<WorkspaceMember> WorkspaceMembers => Set<WorkspaceMember>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
