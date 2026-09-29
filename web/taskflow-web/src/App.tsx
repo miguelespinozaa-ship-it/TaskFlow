@@ -1,5 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { api, type Project, type Task, type TaskPriority, type TaskStatus } from './api'
+import {
+  api,
+  refreshSession,
+  subscribeSession,
+  type AuthResponse,
+  type Project,
+  type Task,
+  type TaskPriority,
+  type TaskStatus,
+  type WorkspaceSummary,
+} from './api'
 
 const COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: 'Todo', label: 'Por hacer' },
@@ -11,13 +21,86 @@ const COLUMNS: { status: TaskStatus; label: string }[] = [
 const PRIORITIES: TaskPriority[] = ['Low', 'Medium', 'High', 'Urgent']
 
 export default function App() {
+  const [session, setSession] = useState<AuthResponse | null>(null)
+  const [booting, setBooting] = useState(true)
+
+  useEffect(() => {
+    subscribeSession(setSession)
+    // Al cargar: si hay cookie de refresh válida, recuperamos la sesión sin pedir login.
+    refreshSession().finally(() => setBooting(false))
+  }, [])
+
+  if (booting) return <p className="app muted">Cargando…</p>
+  if (!session) return <AuthScreen />
+  // key: al cambiar de workspace se remonta todo el board con datos del tenant nuevo.
+  return <Workspace key={session.workspace.id} session={session} />
+}
+
+function AuthScreen() {
+  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [error, setError] = useState<string>()
+  const [busy, setBusy] = useState(false)
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setError(undefined)
+    try {
+      if (mode === 'login') await api.login(email, password)
+      else await api.register(email, password, displayName)
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="auth">
+      <h1>TaskFlow</h1>
+      <form className="auth-form" onSubmit={submit}>
+        <h2>{mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}</h2>
+        {mode === 'register' && (
+          <input placeholder="Nombre" value={displayName} onChange={(e) => setDisplayName(e.target.value)} aria-label="Nombre" />
+        )}
+        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
+        <input
+          type="password"
+          placeholder="Contraseña"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          aria-label="Contraseña"
+        />
+        {mode === 'register' && <p className="muted small">Mínimo 8 caracteres, con mayúscula, minúscula y número.</p>}
+        {error && <p className="error small" role="alert">{error}</p>}
+        <button type="submit" disabled={busy}>
+          {busy ? '…' : mode === 'login' ? 'Entrar' : 'Registrarme'}
+        </button>
+        <button type="button" className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
+          {mode === 'login' ? '¿No tenés cuenta? Registrate' : '¿Ya tenés cuenta? Iniciá sesión'}
+        </button>
+        {mode === 'login' && (
+          <p className="muted small">Demo: demo@taskflow.dev · member@taskflow.dev · viewer@taskflow.dev — contraseña Demo1234</p>
+        )}
+      </form>
+    </div>
+  )
+}
+
+function Workspace({ session }: { session: AuthResponse }) {
+  const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [projectId, setProjectId] = useState<string>()
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>()
+  const canWrite = session.workspace.role !== 'Viewer'
 
   useEffect(() => {
+    api.listWorkspaces().then(setWorkspaces).catch(() => {})
     api
       .listProjects()
       .then((list) => {
@@ -26,7 +109,7 @@ export default function App() {
         if (list.length === 0) setLoading(false)
       })
       .catch((e: Error) => {
-        setError(`No se pudo conectar con la API: ${e.message}`)
+        setError(e.message)
         setLoading(false)
       })
   }, [])
@@ -47,6 +130,28 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <h1>TaskFlow</h1>
+        <div className="topbar-right">
+          <select
+            value={session.workspace.id}
+            onChange={(e) => api.switchWorkspace(e.target.value).catch((err: Error) => setError(err.message))}
+            aria-label="Workspace"
+          >
+            {(workspaces.length ? workspaces : [session.workspace]).map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name} ({w.role})
+              </option>
+            ))}
+          </select>
+          <span className="muted small">{session.user.displayName}</span>
+          <button type="button" className="secondary" onClick={() => api.logout()}>
+            Salir
+          </button>
+        </div>
+      </header>
+
+      {error && <p className="error" role="alert">{error}</p>}
+
+      <div className="toolbar">
         {projects.length > 0 && (
           <select value={projectId} onChange={(e) => setProjectId(e.target.value)} aria-label="Proyecto">
             {projects.map((p) => (
@@ -56,28 +161,66 @@ export default function App() {
             ))}
           </select>
         )}
-      </header>
-
-      {error && <p className="error" role="alert">{error}</p>}
+        {canWrite && (
+          <CreateProjectForm
+            onCreated={(p) => {
+              setProjects((prev) => [...prev, p])
+              setProjectId(p.id)
+            }}
+          />
+        )}
+        {!canWrite && <span className="badge">Solo lectura (Viewer)</span>}
+      </div>
 
       {project && (
         <>
-          <CreateTaskForm
-            projectId={project.id}
-            onCreated={(task) => setTasks((prev) => [...prev, task])}
-          />
-          {loading ? (
-            <p className="muted">Cargando tareas…</p>
-          ) : (
-            <Board tasks={tasks} keyPrefix={project.keyPrefix} />
+          {canWrite && (
+            <CreateTaskForm projectId={project.id} onCreated={(task) => setTasks((prev) => [...prev, task])} />
           )}
+          {loading ? <p className="muted">Cargando tareas…</p> : <Board tasks={tasks} keyPrefix={project.keyPrefix} />}
         </>
       )}
 
-      {!loading && !error && projects.length === 0 && (
-        <p className="muted">No hay proyectos. Arrancá la API en modo Development para crear el seed de demo.</p>
+      {!loading && projects.length === 0 && (
+        <p className="muted">Este workspace no tiene proyectos todavía.{canWrite && ' Creá uno arriba.'}</p>
       )}
     </div>
+  )
+}
+
+function CreateProjectForm({ onCreated }: { onCreated: (p: Project) => void }) {
+  const [name, setName] = useState('')
+  const [keyPrefix, setKeyPrefix] = useState('')
+  const [error, setError] = useState<string>()
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setError(undefined)
+    try {
+      onCreated(await api.createProject(name, keyPrefix))
+      setName('')
+      setKeyPrefix('')
+    } catch (err) {
+      setError((err as Error).message)
+    }
+  }
+
+  return (
+    <form className="inline-form" onSubmit={submit}>
+      <input placeholder="Nuevo proyecto" value={name} onChange={(e) => setName(e.target.value)} aria-label="Nombre del proyecto" />
+      <input
+        placeholder="PREFIJO"
+        value={keyPrefix}
+        onChange={(e) => setKeyPrefix(e.target.value.toUpperCase())}
+        maxLength={10}
+        className="prefix"
+        aria-label="Prefijo"
+      />
+      <button type="submit" className="secondary">
+        + Proyecto
+      </button>
+      {error && <span className="error small" role="alert">{error}</span>}
+    </form>
   )
 }
 
