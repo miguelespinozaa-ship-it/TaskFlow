@@ -7,10 +7,11 @@ using TaskFlow.IntegrationTests.Infrastructure;
 namespace TaskFlow.IntegrationTests;
 
 /// <summary>
-/// Verifica el global query filter por tenant contra Postgres real. El resolver de tenant
-/// llega en la fase 2; acá seteamos CurrentWorkspaceId a mano en el DbContext.
+/// Verifica el global query filter por tenant directamente sobre el DbContext, sin HTTP.
+/// CurrentWorkspaceId se fija a mano (en un request lo resuelve TenantResolutionMiddleware).
 /// </summary>
-public sealed class TenantFilterTests(TaskFlowApiFactory factory) : IClassFixture<TaskFlowApiFactory>
+[Collection(ApiCollection.Name)]
+public sealed class TenantFilterTests(TaskFlowApiFactory factory)
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
