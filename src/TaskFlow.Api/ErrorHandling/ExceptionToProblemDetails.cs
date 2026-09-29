@@ -2,6 +2,8 @@ using System.Diagnostics;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using TaskFlow.Application.Common.Exceptions;
 using TaskFlow.Domain.Common;
 
@@ -19,8 +21,13 @@ public sealed class ExceptionToProblemDetails(
             NotFoundException => (StatusCodes.Status404NotFound, ex.Message),
             UnauthorizedException => (StatusCodes.Status401Unauthorized, ex.Message),
             ConflictException => (StatusCodes.Status409Conflict, ex.Message),
+            ForbiddenException or ForbiddenDomainException => (StatusCodes.Status403Forbidden, ex.Message),
             ValidationException => (StatusCodes.Status400BadRequest, "La solicitud no es válida."),
             DomainException => (StatusCodes.Status422UnprocessableEntity, ex.Message),
+            // Red de seguridad: si dos requests pasan la validación "¿ya existe?" a la vez, el índice
+            // único de la base rechaza al segundo. Eso es un 409, no un 500.
+            DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } } =>
+                (StatusCodes.Status409Conflict, "El recurso ya existe."),
             _ => (StatusCodes.Status500InternalServerError, "Error interno."),
         };
 

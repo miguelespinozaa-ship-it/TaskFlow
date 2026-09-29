@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using TaskFlow.Application.Auth;
 using TaskFlow.Application.Projects;
+using TaskFlow.Application.Tasks;
 using TaskFlow.Domain.Workspaces;
 
 namespace TaskFlow.IntegrationTests.Infrastructure;
@@ -55,6 +56,20 @@ public abstract class ApiTestBase(TaskFlowApiFactory factory)
             "/api/v1/projects", new { name, keyPrefix = "PR" }, Json, Ct);
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<ProjectDto>(Json, Ct))!;
+    }
+
+    protected async Task<TaskDto> CreateTaskAsync(Session session, Guid projectId, string title = "Tarea", object? extra = null)
+    {
+        var body = extra ?? new { title };
+        var response = await session.Client.PostAsJsonAsync($"/api/v1/projects/{projectId}/tasks", body, Json, Ct);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<TaskDto>(Json, Ct))!;
+    }
+
+    protected static async Task<T> ReadAsync<T>(HttpResponseMessage response)
+    {
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<T>(Json, Ct))!;
     }
 
     protected async Task AddMemberAsync(Session admin, Session user, WorkspaceRole role)

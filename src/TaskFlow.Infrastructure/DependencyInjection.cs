@@ -30,6 +30,9 @@ public static class DependencyInjection
         services.AddScoped<ITaskRepository, TaskRepository>();
         services.AddScoped<IWorkspaceRepository, WorkspaceRepository>();
         services.AddScoped<IUserDirectory, UserDirectory>();
+        services.AddScoped<ILabelRepository, LabelRepository>();
+        services.AddScoped<ICommentRepository, CommentRepository>();
+        services.AddScoped<IActivityRepository, ActivityRepository>();
 
         AddIdentity(services);
         return services;
