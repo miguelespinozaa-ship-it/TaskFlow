@@ -17,6 +17,8 @@ public sealed class ExceptionToProblemDetails(
         var (status, title) = ex switch
         {
             NotFoundException => (StatusCodes.Status404NotFound, ex.Message),
+            UnauthorizedException => (StatusCodes.Status401Unauthorized, ex.Message),
+            ConflictException => (StatusCodes.Status409Conflict, ex.Message),
             ValidationException => (StatusCodes.Status400BadRequest, "La solicitud no es válida."),
             DomainException => (StatusCodes.Status422UnprocessableEntity, ex.Message),
             _ => (StatusCodes.Status500InternalServerError, "Error interno."),
