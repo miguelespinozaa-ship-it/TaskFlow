@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using TaskFlow.Api.Operations;
 using TaskFlow.Application.Abstractions;
 using TaskFlow.Application.Auth;
 using TaskFlow.Application.Common.Exceptions;
@@ -17,11 +19,13 @@ public sealed class AuthController(IAuthService auth, ICurrentUser currentUser) 
     private const string CookiePath = "/api/v1/auth"; // el navegador solo la manda a estos endpoints
 
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitSetup.AuthPolicy)]
     [HttpPost("register")]
     public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request, CancellationToken ct) =>
         Session(await auth.RegisterAsync(request, ct));
 
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitSetup.AuthPolicy)]
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponse>> Login(LoginRequest request, CancellationToken ct) =>
         Session(await auth.LoginAsync(request, ct));

@@ -29,6 +29,9 @@ public sealed class TaskFlowApiFactory : WebApplicationFactory<Program>, IAsyncL
         builder.UseSetting("Jwt:Secret", "integration-tests-secret-0123456789-abcdefghijklmnop");
         // Sin sincronizador de fondo: los tests disparan la sincronización a mano y de forma determinista.
         builder.UseSetting("GitHub:SyncIntervalMinutes", "0");
+        // Todos los tests salen de la misma "IP": con el límite real, la suite se bloquearía a sí misma.
+        // El límite se prueba aparte, en RateLimitTests, con su propio valor.
+        builder.UseSetting("RateLimiting:Auth:PermitLimit", "1000000");
 
         // GitHub falso en memoria: los tests no dependen de la red ni gastan el límite de la API real.
         builder.ConfigureTestServices(services =>
