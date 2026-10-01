@@ -57,6 +57,47 @@ public sealed class ProjectsTests(TaskFlowApiFactory factory) : ApiTestBase(fact
         (await s.Client.GetFromJsonAsync<CursorPage<TaskDto>>("/api/v1/tasks", Json, Ct))!.Items.ShouldBeEmpty();
     }
 
+    private static Task<HttpResponseMessage> CreateAsync(Session s, string keyPrefix) =>
+        s.Client.PostAsJsonAsync("/api/v1/projects", new { name = "Proyecto", keyPrefix }, Json, Ct);
+
+    [Fact]
+    public async Task Prefijo_repetido_en_el_mismo_workspace_devuelve_409()
+    {
+        var s = await RegisterAsync();
+        (await CreateAsync(s, "WEB")).StatusCode.ShouldBe(HttpStatusCode.Created);
+
+        var duplicate = await CreateAsync(s, "WEB");
+
+        duplicate.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await s.Client.GetFromJsonAsync<List<ProjectDto>>("/api/v1/projects", Json, Ct))!.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public async Task El_mismo_prefijo_se_puede_usar_en_otro_workspace_y_tras_borrar_el_proyecto()
+    {
+        var a = await RegisterAsync();
+        var b = await RegisterAsync();
+        var first = await ReadAsync<ProjectDto>(await CreateAsync(a, "WEB"));
+
+        (await CreateAsync(b, "WEB")).StatusCode.ShouldBe(HttpStatusCode.Created);
+
+        await a.Client.DeleteAsync($"/api/v1/projects/{first.Id}", Ct);
+        (await CreateAsync(a, "WEB")).StatusCode.ShouldBe(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task Diez_creaciones_simultaneas_con_el_mismo_prefijo_dejan_un_solo_proyecto()
+    {
+        // La validación "¿ya existe?" no alcanza: varias requests la pasan a la vez. El índice único decide.
+        var s = await RegisterAsync();
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 10).Select(_ => CreateAsync(s, "RACE")));
+
+        responses.Count(r => r.StatusCode == HttpStatusCode.Created).ShouldBe(1);
+        responses.Where(r => r.StatusCode != HttpStatusCode.Created).ShouldAllBe(r => r.StatusCode == HttpStatusCode.Conflict);
+        (await s.Client.GetFromJsonAsync<List<ProjectDto>>("/api/v1/projects", Json, Ct))!.ShouldHaveSingleItem();
+    }
+
     [Theory]
     [InlineData(WorkspaceRole.Member, HttpStatusCode.Forbidden)]
     [InlineData(WorkspaceRole.Admin, HttpStatusCode.NoContent)]

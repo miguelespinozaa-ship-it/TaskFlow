@@ -60,6 +60,11 @@ public sealed class ProjectService(
     {
         await validator.ValidateAsync(request, ct);
 
+        // El prefijo identifica al proyecto en tarjetas y búsquedas: dos proyectos con el mismo se confunden.
+        // El repo consulta con el filtro de tenant, así que otro workspace sí puede usar el mismo.
+        if (await projects.KeyPrefixExistsAsync(request.KeyPrefix, ct))
+            throw new ConflictException($"Ya hay un proyecto con el prefijo {request.KeyPrefix} en este workspace.");
+
         // El workspace sale del token, nunca del body: el cliente no elige en qué tenant escribe.
         var project = Project.Create(
             tenant.RequireWorkspaceId(), request.Name, request.KeyPrefix, request.Description, clock.GetUtcNow().UtcDateTime);

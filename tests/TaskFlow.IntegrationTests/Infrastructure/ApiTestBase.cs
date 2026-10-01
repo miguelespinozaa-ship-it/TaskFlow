@@ -39,6 +39,10 @@ public abstract class ApiTestBase(TaskFlowApiFactory factory)
 
     protected static string UniqueEmail() => $"user-{Guid.NewGuid():N}@test.dev";
 
+    /// <summary>Prefijo de proyecto aleatorio (solo letras mayúsculas): es único por workspace.</summary>
+    protected static string UniquePrefix() =>
+        string.Concat(Enumerable.Range(0, 8).Select(_ => (char)('A' + Random.Shared.Next(26))));
+
     protected async Task<Session> RegisterAsync(string? email = null)
     {
         email ??= UniqueEmail();
@@ -53,7 +57,7 @@ public abstract class ApiTestBase(TaskFlowApiFactory factory)
     protected async Task<ProjectDto> CreateProjectAsync(Session session, string name = "Proyecto")
     {
         var response = await session.Client.PostAsJsonAsync(
-            "/api/v1/projects", new { name, keyPrefix = "PR" }, Json, Ct);
+            "/api/v1/projects", new { name, keyPrefix = UniquePrefix() }, Json, Ct);
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<ProjectDto>(Json, Ct))!;
     }
