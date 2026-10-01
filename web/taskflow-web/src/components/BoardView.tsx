@@ -29,7 +29,7 @@ export function BoardView({ canWrite, onOpen }: { canWrite: boolean; onOpen: (ta
         )}
         {canWrite && <CreateProjectForm onCreated={setSelected} />}
         {!canWrite && (
-          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+          <span className="rounded-full border border-violet/60 bg-violet/15 px-2 py-0.5 text-xs text-violet">
             Solo lectura (Viewer)
           </span>
         )}

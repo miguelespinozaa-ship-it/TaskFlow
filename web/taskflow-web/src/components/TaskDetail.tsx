@@ -38,16 +38,16 @@ export function TaskDetail({ taskId, user, canWrite, isAdmin, onClose }: Props) 
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-slate-900/40" onClick={onClose}>
+    <div className="fixed inset-0 z-40 flex animate-fade justify-end bg-void/70 backdrop-blur-sm" onClick={onClose}>
       <aside
         role="dialog"
         aria-modal="true"
         aria-label="Detalle de la tarea"
         onClick={(e) => e.stopPropagation()}
-        className="flex h-full w-full max-w-xl flex-col overflow-y-auto bg-white p-5 shadow-xl dark:bg-slate-900"
+        className="flex h-full w-full max-w-xl animate-drawer flex-col overflow-y-auto border-l border-neon/40 bg-panel p-5 shadow-violet"
       >
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-xs uppercase tracking-wide text-slate-400">Tarea</span>
+          <span className="font-display text-xs tracking-widest text-mint uppercase">Tarea</span>
           <Button ref={closeRef} variant="ghost" onClick={onClose} aria-label="Cerrar">
             ✕
           </Button>
@@ -95,7 +95,7 @@ function TaskForm({ task, user, canWrite, isAdmin, onDeleted }: { task: Task; us
     setLabels.mutate(task.labelIds.includes(id) ? task.labelIds.filter((l) => l !== id) : [...task.labelIds, id])
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="stagger flex flex-col gap-4">
       <Input
         aria-label="Título de la tarea"
         className="text-lg font-semibold"
@@ -108,7 +108,7 @@ function TaskForm({ task, user, canWrite, isAdmin, onDeleted }: { task: Task; us
 
       <div className="grid grid-cols-2 gap-3 text-sm">
         <label className="flex flex-col gap-1">
-          <span className="text-slate-500">Estado</span>
+          <span className="text-dim">Estado</span>
           <Select value={task.status} disabled={!canWrite} onChange={(e) => changeStatus(e.target.value as TaskStatus)} aria-label="Estado">
             {STATUSES.map((s) => (
               <option key={s.value} value={s.value}>
@@ -118,7 +118,7 @@ function TaskForm({ task, user, canWrite, isAdmin, onDeleted }: { task: Task; us
           </Select>
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-slate-500">Prioridad</span>
+          <span className="text-dim">Prioridad</span>
           <Select
             value={task.priority}
             disabled={!canWrite}
@@ -133,7 +133,7 @@ function TaskForm({ task, user, canWrite, isAdmin, onDeleted }: { task: Task; us
           </Select>
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-slate-500">Asignada a</span>
+          <span className="text-dim">Asignada a</span>
           <Select
             value={task.assigneeId ?? ''}
             disabled={!canWrite}
@@ -149,7 +149,7 @@ function TaskForm({ task, user, canWrite, isAdmin, onDeleted }: { task: Task; us
           </Select>
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-slate-500">Vencimiento</span>
+          <span className="text-dim">Vencimiento</span>
           <Input
             type="date"
             aria-label="Vencimiento"
@@ -164,19 +164,19 @@ function TaskForm({ task, user, canWrite, isAdmin, onDeleted }: { task: Task; us
       <ErrorText error={statusError ?? update.error ?? assign.error} />
 
       <section>
-        <h3 className="mb-1 text-sm text-slate-500">Etiquetas</h3>
+        <h3 className="mb-1 text-sm text-dim">Etiquetas</h3>
         <div className="flex flex-wrap items-center gap-1.5">
           {labels.map((l) => (
             <LabelChip key={l.id} label={l} active={task.labelIds.includes(l.id)} onClick={canWrite ? () => toggleLabel(l.id) : undefined} />
           ))}
-          {labels.length === 0 && <span className="text-xs text-slate-400">No hay etiquetas en este workspace.</span>}
+          {labels.length === 0 && <span className="text-xs text-dim">No hay etiquetas en este workspace.</span>}
         </div>
         {canWrite && <NewLabelForm />}
         <ErrorText error={setLabels.error} />
       </section>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-slate-500">Descripción</span>
+        <span className="text-dim">Descripción</span>
         <Textarea
           aria-label="Descripción de la tarea"
           value={description}
@@ -187,7 +187,7 @@ function TaskForm({ task, user, canWrite, isAdmin, onDeleted }: { task: Task; us
         />
       </label>
 
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-dim">
         Creada {formatDateTime(task.createdAt)}
         {reporter && ` por ${reporter.displayName}`} · actualizada {formatDateTime(task.updatedAt)}
       </p>
@@ -206,7 +206,7 @@ function TaskForm({ task, user, canWrite, isAdmin, onDeleted }: { task: Task; us
       <Comments taskId={task.id} user={user} canWrite={canWrite} isAdmin={isAdmin} />
 
       <section>
-        <h3 className="mb-2 text-sm font-semibold">Historial</h3>
+        <h3 className="mb-2 font-display text-xs font-semibold tracking-widest text-mint uppercase">Historial</h3>
         <ActivityList entityId={task.id} compact />
       </section>
     </div>
@@ -248,21 +248,21 @@ function Comments({ taskId, user, canWrite, isAdmin }: { taskId: string; user: U
 
   return (
     <section>
-      <h3 className="mb-2 text-sm font-semibold">Comentarios ({comments.length})</h3>
+      <h3 className="mb-2 font-display text-xs font-semibold tracking-widest text-mint uppercase">Comentarios ({comments.length})</h3>
       {isLoading && <Spinner />}
-      <ul className="flex flex-col gap-3">
+      <ul className="stagger flex flex-col gap-3">
         {comments.map((c) => (
           <li key={c.id} className="flex gap-2">
             <Avatar name={c.authorName} size="md" />
-            <div className="flex-1 rounded-md bg-slate-50 p-2 text-sm dark:bg-slate-800">
-              <div className="flex items-center justify-between text-xs text-slate-500">
+            <div className="flex-1 rounded-md border border-line bg-raised/60 p-2 text-sm">
+              <div className="flex items-center justify-between text-xs text-dim">
                 <span>
-                  <strong className="text-slate-700 dark:text-slate-200">{c.authorName}</strong> · {formatDateTime(c.createdAt)}
+                  <strong className="text-ink">{c.authorName}</strong> · {formatDateTime(c.createdAt)}
                   {c.editedAt && ' (editado)'}
                 </span>
                 {/* Mismo criterio que la API: el autor o un Admin/Owner. La API lo valida igual. */}
                 {canWrite && (c.authorId === user.id || isAdmin) && (
-                  <button type="button" className="text-red-600 hover:underline" onClick={() => remove.mutate(c.id)}>
+                  <button type="button" className="text-hot hover:underline" onClick={() => remove.mutate(c.id)}>
                     Borrar
                   </button>
                 )}

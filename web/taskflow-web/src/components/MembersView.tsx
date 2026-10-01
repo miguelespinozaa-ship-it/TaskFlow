@@ -29,22 +29,22 @@ export function MembersView({ isAdmin }: { isAdmin: boolean }) {
           <Button type="submit" disabled={add.isPending}>
             Agregar miembro
           </Button>
-          <p className="w-full text-xs text-slate-500">La persona tiene que tener una cuenta. Las invitaciones por email llegan en la fase 4.</p>
+          <p className="w-full text-xs text-dim">La persona tiene que tener una cuenta. Las invitaciones por email llegan en la fase 4.</p>
           <ErrorText error={add.error} />
         </form>
       )}
       <ErrorText error={error} />
       {isLoading && <Spinner />}
-      <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-900">
+      <ul className="stagger divide-y divide-line overflow-hidden rounded-lg border border-line bg-panel/80 backdrop-blur-sm">
         {members.map((m) => (
-          <li key={m.userId} className="flex items-center gap-3 px-3 py-2 text-sm">
+          <li key={m.userId} className="flex items-center gap-3 px-3 py-2 text-sm transition duration-150 hover:bg-raised">
             <Avatar name={m.displayName} size="md" />
             <div className="flex-1">
               <p className="font-medium">{m.displayName}</p>
-              <p className="text-xs text-slate-500">{m.email}</p>
+              <p className="text-xs text-dim">{m.email}</p>
             </div>
-            <span className="text-xs text-slate-500">desde {formatDate(m.joinedAt)}</span>
-            <span className="w-24 text-right text-xs font-medium">{roleLabels[m.role]}</span>
+            <span className="text-xs text-dim">desde {formatDate(m.joinedAt)}</span>
+            <span className="w-24 text-right font-display text-xs font-medium text-mint">{roleLabels[m.role]}</span>
           </li>
         ))}
       </ul>

@@ -40,6 +40,8 @@ Api → Infrastructure → Application → Domain
 - Al cambiar de workspace o cerrar sesión se **vacía la cache** de TanStack Query: nunca se pinta, ni por un
   instante, información del tenant anterior.
 - La UI oculta lo que el rol no permite, pero quien decide es la API (403).
+- **Tema Cyberpunk** (violeta + verde neón) definido como tokens semánticos de Tailwind v4 (`panel`, `line`,
+  `neon`…) y animaciones de entrada, hover y arrastre. Se desactivan con `prefers-reduced-motion`.
 
 Los tests de arquitectura (NetArchTest) fallan si `Domain` o `Application` dependen de EF Core, ASP.NET o capas externas.
 

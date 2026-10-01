@@ -77,7 +77,7 @@ export function SearchView({ onOpen }: { onOpen: (taskId: string) => void }) {
       ) : tasks.length === 0 ? (
         <Empty>No hay tareas que coincidan.</Empty>
       ) : (
-        <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-900">
+        <ul className="stagger divide-y divide-line overflow-hidden rounded-lg border border-line bg-panel/80 backdrop-blur-sm">
           {tasks.map((t) => {
             const project = projects.find((p) => p.id === t.projectId)
             return (
@@ -85,14 +85,14 @@ export function SearchView({ onOpen }: { onOpen: (taskId: string) => void }) {
                 <button
                   type="button"
                   onClick={() => onOpen(t.id)}
-                  className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800"
+                  className="flex w-full items-center gap-3 border-l-2 border-transparent px-3 py-2 text-left text-sm transition duration-150 hover:border-neon hover:bg-raised hover:pl-4"
                 >
-                  <span className="w-10 shrink-0 text-xs text-slate-400">{project?.keyPrefix}</span>
+                  <span className="w-12 shrink-0 font-display text-xs text-violet">{project?.keyPrefix}</span>
                   <span className="flex-1 font-medium">{t.title}</span>
                   {t.labelIds.map((id) => labels.find((l) => l.id === id)).filter(Boolean).map((l) => <LabelChip key={l!.id} label={l!} />)}
-                  <span className="w-24 text-xs text-slate-500">{STATUSES.find((s) => s.value === t.status)?.label}</span>
+                  <span className="w-24 text-xs text-dim">{STATUSES.find((s) => s.value === t.status)?.label}</span>
                   <PriorityBadge priority={t.priority} />
-                  <span className="w-16 text-right text-xs text-slate-400">{formatDate(t.createdAt)}</span>
+                  <span className="w-16 text-right text-xs text-dim">{formatDate(t.createdAt)}</span>
                 </button>
               </li>
             )

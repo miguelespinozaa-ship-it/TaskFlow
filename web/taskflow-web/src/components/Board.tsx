@@ -44,6 +44,8 @@ export function Board({ projectId, keyPrefix, tasks, members, labels, canWrite, 
   const move = useMoveTask(projectId)
   const [columns, setColumns] = useState<Columns>(() => group(tasks))
   const [activeId, setActiveId] = useState<string | null>(null)
+  // Columna sobre la que está la tarjeta arrastrada (aunque el cursor esté encima de otra tarjeta).
+  const [overStatus, setOverStatus] = useState<TaskStatus | null>(null)
   const origin = useRef<{ status: TaskStatus; afterTaskId: string | null } | null>(null)
 
   // Mientras NO se arrastra, el board refleja al servidor. Durante el arrastre manda el estado local.
@@ -78,6 +80,7 @@ export function Board({ projectId, keyPrefix, tasks, members, labels, canWrite, 
   // Cruzar de columna se resuelve en dragOver para que la tarjeta "entre" en la columna destino
   // mientras se arrastra (y las demás le hagan lugar).
   function onDragOver({ active, over }: DragOverEvent) {
+    setOverStatus(over ? (findColumn(columns, String(over.id)) ?? null) : null)
     if (!over) return
     setColumns((cols) => {
       const from = findColumn(cols, String(active.id))
@@ -98,6 +101,7 @@ export function Board({ projectId, keyPrefix, tasks, members, labels, canWrite, 
   function onDragEnd({ active, over }: DragEndEvent) {
     const taskId = String(active.id)
     setActiveId(null)
+    setOverStatus(null)
     if (!over) {
       setColumns(group(tasks))
       return
@@ -138,17 +142,18 @@ export function Board({ projectId, keyPrefix, tasks, members, labels, canWrite, 
       onDragEnd={onDragEnd}
       onDragCancel={() => {
         setActiveId(null)
+        setOverStatus(null)
         setColumns(group(tasks))
       }}
     >
       {move.isError && (
-        <p role="alert" className="mb-2 text-sm text-red-600">
+        <p role="alert" className="mb-2 animate-shake text-sm text-hot">
           No se pudo mover la tarea: {move.error.message}. Se restauró el board.
         </p>
       )}
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="stagger grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {STATUSES.map(({ value, label }) => (
-          <Column key={value} status={value} label={label} tasks={columns[value]}>
+          <Column key={value} status={value} label={label} tasks={columns[value]} highlighted={overStatus === value}>
             {columns[value].map((task) => (
               <SortableCard key={task.id} task={task} disabled={!canWrite} onOpen={onOpen}>
                 <CardBody task={task} keyPrefix={keyPrefix} membersById={membersById} labelsById={labelsById} />
@@ -159,7 +164,7 @@ export function Board({ projectId, keyPrefix, tasks, members, labels, canWrite, 
       </div>
       <DragOverlay>
         {active && (
-          <div className="rotate-2 rounded-md border border-indigo-300 bg-white p-3 shadow-lg dark:bg-slate-800">
+          <div className="scale-105 rotate-2 cursor-grabbing rounded-md border border-neon bg-raised p-3 shadow-neon">
             <CardBody task={active} keyPrefix={keyPrefix} membersById={membersById} labelsById={labelsById} />
           </div>
         )}
@@ -168,21 +173,34 @@ export function Board({ projectId, keyPrefix, tasks, members, labels, canWrite, 
   )
 }
 
-function Column({ status, label, tasks, children }: { status: TaskStatus; label: string; tasks: Task[]; children: React.ReactNode }) {
+function Column({
+  status,
+  label,
+  tasks,
+  highlighted,
+  children,
+}: {
+  status: TaskStatus
+  label: string
+  tasks: Task[]
+  highlighted: boolean
+  children: React.ReactNode
+}) {
   // Droppable propio: sin él no se puede soltar en una columna vacía.
-  const { setNodeRef, isOver } = useDroppable({ id: status })
+  const { setNodeRef } = useDroppable({ id: status })
   return (
     <section
       ref={setNodeRef}
       aria-label={label}
       className={cx(
-        'flex min-h-48 flex-col rounded-lg border bg-slate-50 p-2 dark:bg-slate-900/60',
-        isOver ? 'border-indigo-400' : 'border-slate-200 dark:border-slate-700',
+        'flex min-h-48 flex-col rounded-lg border bg-panel/70 p-2 backdrop-blur-sm transition duration-200',
+        // Al arrastrar una tarjeta encima, la columna "se enciende".
+        highlighted ? 'animate-glow border-neon bg-neon/5' : 'border-line',
       )}
     >
-      <h2 className="mb-2 flex items-center justify-between px-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
+      <h2 className="mb-2 flex items-center justify-between px-1 font-display text-xs font-semibold tracking-widest text-mint uppercase">
         {label}
-        <span className="rounded-full bg-slate-200 px-2 text-xs font-normal dark:bg-slate-700">{tasks.length}</span>
+        <span key={tasks.length} className="animate-pop rounded-full bg-raised px-2 py-0.5 text-xs font-normal tracking-normal text-ink">{tasks.length}</span>
       </h2>
       <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
         <div className="flex flex-1 flex-col gap-2">
@@ -219,8 +237,11 @@ function SortableCard({ task, disabled, onOpen, children }: { task: Task; disabl
       data-testid="task-card"
       aria-label={task.title}
       className={cx(
-        'cursor-pointer rounded-md border border-slate-200 bg-white p-3 shadow-sm transition hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800',
-        isDragging && 'opacity-40',
+        'animate-rise cursor-grab rounded-md border border-line bg-raised/80 p-3 shadow-card transition duration-200',
+        'hover:-translate-y-0.5 hover:border-neon hover:shadow-neon focus-visible:border-neon focus-visible:shadow-neon focus-visible:outline-none',
+        disabled && 'cursor-pointer',
+        // El hueco que deja la tarjeta mientras se arrastra: contorno punteado.
+        isDragging && 'border-dashed border-violet opacity-40 shadow-none',
       )}
     >
       {children}
@@ -244,18 +265,18 @@ function CardBody({
   return (
     <>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-slate-400">{keyPrefix}</span>
+        <span className="font-display text-xs text-violet">{keyPrefix}</span>
         <PriorityBadge priority={task.priority} />
       </div>
-      <h3 className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">{task.title}</h3>
+      <h3 className="mt-1 text-sm font-medium text-ink">{task.title}</h3>
       {task.labelIds.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {task.labelIds.map((id) => labelsById.get(id)).filter(Boolean).map((l) => <LabelChip key={l!.id} label={l!} />)}
         </div>
       )}
       {(assignee || task.dueAt) && (
-        <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-          {task.dueAt ? <span className={cx(overdue && 'font-medium text-red-600')}>Vence {formatDate(task.dueAt)}</span> : <span />}
+        <div className="mt-2 flex items-center justify-between text-xs text-dim">
+          {task.dueAt ? <span className={cx(overdue && 'font-medium text-hot')}>Vence {formatDate(task.dueAt)}</span> : <span />}
           {assignee && <Avatar name={assignee.displayName} />}
         </div>
       )}

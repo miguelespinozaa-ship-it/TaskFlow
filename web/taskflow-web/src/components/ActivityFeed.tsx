@@ -68,13 +68,13 @@ export function ActivityList({ entityId, compact = false }: { entityId?: string;
     <div>
       <ErrorText error={error} />
       {items.length === 0 && <Empty>Sin actividad todavía.</Empty>}
-      <ol className="flex flex-col gap-2">
+      <ol className="stagger flex flex-col gap-2">
         {items.map((a) => (
           <li key={a.id} className="flex items-start gap-2 text-sm">
             {!compact && <Avatar name={a.actorName ?? 'Sistema'} />}
             <div>
-              <p className="text-slate-700 dark:text-slate-200">{describe(a, show)}</p>
-              <time className="text-xs text-slate-400" dateTime={a.createdAt}>
+              <p className="text-ink">{describe(a, show)}</p>
+              <time className="text-xs text-dim" dateTime={a.createdAt}>
                 {formatDateTime(a.createdAt)}
               </time>
             </div>

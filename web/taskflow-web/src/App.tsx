@@ -60,9 +60,9 @@ function Shell({ session }: { session: AuthResponse }) {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+      <header className="sticky top-0 z-30 border-b border-line bg-panel/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3">
-          <h1 className="text-lg font-bold">TaskFlow</h1>
+          <h1 className="logo text-xl font-bold tracking-tight">TaskFlow</h1>
           <nav className="flex gap-1" aria-label="Secciones">
             {TABS.map((t) => (
               <button
@@ -71,10 +71,11 @@ function Shell({ session }: { session: AuthResponse }) {
                 onClick={() => setTab(t.id)}
                 aria-current={tab === t.id ? 'page' : undefined}
                 className={cx(
-                  'rounded-md px-3 py-1.5 text-sm',
+                  // Subrayado neón que crece desde el centro en la pestaña activa (y al pasar el mouse).
+                  'relative rounded-md px-3 py-1.5 text-sm transition duration-150 after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:origin-center after:rounded-full after:bg-neon after:shadow-neon after:transition-transform after:duration-200',
                   tab === t.id
-                    ? 'bg-indigo-50 font-medium text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200'
-                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
+                    ? 'font-semibold text-neon after:scale-x-100'
+                    : 'text-dim after:scale-x-0 hover:bg-raised hover:text-ink hover:after:scale-x-50',
                 )}
               >
                 {t.label}
@@ -93,7 +94,7 @@ function Shell({ session }: { session: AuthResponse }) {
                 </option>
               ))}
             </Select>
-            <span className="hidden text-sm text-slate-500 sm:inline">{session.user.displayName}</span>
+            <span className="hidden text-sm text-dim sm:inline">{session.user.displayName}</span>
             <Button variant="secondary" onClick={() => auth.logout()}>
               Salir
             </Button>
@@ -101,7 +102,8 @@ function Shell({ session }: { session: AuthResponse }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-5">
+      {/* key: cada cambio de pestaña vuelve a montar el contenido y dispara la animación de entrada. */}
+      <main key={tab} className="mx-auto max-w-7xl animate-rise px-4 py-5">
         <ErrorText error={switchError} />
         {tab === 'board' && <BoardView canWrite={canWrite} onOpen={setOpenTaskId} />}
         {tab === 'search' && <SearchView onOpen={setOpenTaskId} />}

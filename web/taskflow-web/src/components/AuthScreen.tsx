@@ -25,11 +25,12 @@ export function AuthScreen() {
   }
 
   return (
-    <main className="mx-auto mt-[12vh] max-w-sm px-4">
-      <h1 className="mb-6 text-center text-2xl font-bold">TaskFlow</h1>
+    <main className="mx-auto mt-[12vh] max-w-sm animate-rise px-4">
+      <h1 className="logo mb-2 text-center text-4xl font-bold tracking-tight">TaskFlow</h1>
+      <p className="mb-6 text-center font-display text-xs tracking-widest text-dim uppercase">gestión de proyectos multi-tenant</p>
       <form
         onSubmit={submit}
-        className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+        className="flex flex-col gap-3 rounded-xl border border-line bg-panel/80 p-6 shadow-violet backdrop-blur-sm"
       >
         <h2 className="text-lg font-semibold">{mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}</h2>
         {mode === 'register' && (
@@ -44,7 +45,7 @@ export function AuthScreen() {
           aria-label="Contraseña"
           required
         />
-        {mode === 'register' && <p className="text-xs text-slate-500">Mínimo 8 caracteres, con mayúscula, minúscula y número.</p>}
+        {mode === 'register' && <p className="text-xs text-dim">Mínimo 8 caracteres, con mayúscula, minúscula y número.</p>}
         <ErrorText error={error} />
         <Button type="submit" disabled={busy}>
           {busy ? '…' : mode === 'login' ? 'Entrar' : 'Registrarme'}
@@ -53,7 +54,7 @@ export function AuthScreen() {
           {mode === 'login' ? '¿No tenés cuenta? Registrate' : '¿Ya tenés cuenta? Iniciá sesión'}
         </Button>
         {mode === 'login' && (
-          <p className="text-center text-xs text-slate-500">
+          <p className="text-center text-xs text-dim">
             Demo: demo@ · member@ · viewer@taskflow.dev — contraseña <code>Demo1234</code>
           </p>
         )}
