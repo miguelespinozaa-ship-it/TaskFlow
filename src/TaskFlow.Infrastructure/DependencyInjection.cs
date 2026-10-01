@@ -1,9 +1,12 @@
+using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using TaskFlow.Application.Abstractions;
 using TaskFlow.Application.Auth;
+using TaskFlow.Infrastructure.GitHub;
 using TaskFlow.Infrastructure.Identity;
 using TaskFlow.Infrastructure.Persistence;
 using TaskFlow.Infrastructure.Persistence.Repositories;
@@ -33,9 +36,33 @@ public static class DependencyInjection
         services.AddScoped<ILabelRepository, LabelRepository>();
         services.AddScoped<ICommentRepository, CommentRepository>();
         services.AddScoped<IActivityRepository, ActivityRepository>();
+        services.AddScoped<IRepositoryLinkRepository, RepositoryLinkRepository>();
 
         AddIdentity(services);
+        AddGitHub(services);
         return services;
+    }
+
+    private static void AddGitHub(IServiceCollection services)
+    {
+        services.AddOptions<GitHubOptions>().BindConfiguration(GitHubOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
+
+        // Typed client con IHttpClientFactory: reutiliza conexiones y no agota sockets como `new HttpClient()` por request.
+        services.AddHttpClient<IGitHubClient, GitHubClient>((sp, http) =>
+        {
+            http.BaseAddress = GitHubClient.BaseAddress;
+            http.Timeout = TimeSpan.FromSeconds(15);
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("TaskFlow"); // GitHub rechaza requests sin User-Agent
+            http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+            http.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
+
+            var token = sp.GetRequiredService<IOptions<GitHubOptions>>().Value.Token;
+            if (!string.IsNullOrWhiteSpace(token))
+                http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        });
+
+        services.AddSingleton<RepositorySyncRunner>();
+        services.AddHostedService<RepositorySyncWorker>();
     }
 
     private static void AddIdentity(IServiceCollection services)
