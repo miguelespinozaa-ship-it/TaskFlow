@@ -54,6 +54,9 @@ export const titles = (page: Page, label: string) =>
 
 /** Arrastre con el mouse en pasos: dnd-kit necesita ver el movimiento para activar y ubicar la tarjeta. */
 export async function drag(page: Page, source: Locator, target: Locator) {
+  // hover() espera a que la tarjeta deje de moverse (tras un movimiento anterior, las tarjetas se reacomodan
+  // con una animación): medirla antes haría que el clic cayera en un hueco.
+  await source.hover()
   const from = (await source.boundingBox())!
   const to = (await target.boundingBox())!
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)

@@ -8,7 +8,7 @@ ASP.NET Core 10 · EF Core · PostgreSQL · React 19 · TypeScript
 
 [![CI](https://github.com/miguelespinozaa-ship-it/TaskFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/miguelespinozaa-ship-it/TaskFlow/actions/workflows/ci.yml)
 
-**Versión 1.0** — funcional de punta a punta, con 245 tests automáticos y 8 pruebas de navegador que corren en cada push.
+**Versión 1.0** — funcional de punta a punta, con 251 tests automáticos y 9 pruebas de navegador que corren en cada push.
 
 ![Board de un proyecto con cuatro columnas y tarjetas con prioridad, etiquetas, vencimiento y persona asignada](docs/screenshots/board.png)
 
@@ -53,6 +53,12 @@ ASP.NET Core 10 · EF Core · PostgreSQL · React 19 · TypeScript
 - Historial automático: cada cambio queda registrado con quién lo hizo, el valor anterior y el nuevo.
 - Lo que se borra no se pierde: se marca como borrado y deja de mostrarse.
 - **Tiempo real**: lo que hace una persona aparece en el navegador de las demás sin recargar (SignalR).
+
+**Planes**
+- Cada workspace tiene un plan. **Free** admite hasta 3 miembros y 20 proyectos; **Pro** no tiene tope.
+- Al superar un límite la API responde `402 Payment Required` con un mensaje que dice qué límite se alcanzó.
+- El Owner cambia de plan desde la pestaña Miembros, que muestra el uso de cada límite. No hay cobro real:
+  el cambio de plan representa lo que haría el aviso de un proveedor de pagos.
 
 **Integración con GitHub**
 - Cada proyecto se puede conectar a un repositorio público.
@@ -203,7 +209,7 @@ llegan a depender de EF Core, de ASP.NET o de una capa externa.
 ## Tests
 
 ```bash
-dotnet test --solution TaskFlow.slnx     # 245 tests; los de integración necesitan Docker
+dotnet test --solution TaskFlow.slnx     # 251 tests; los de integración necesitan Docker
 
 # pruebas de navegador, contra el sistema levantado con Docker (AUTH_RATE_LIMIT=1000 en .env)
 cd web/taskflow-web && npx playwright install chromium && npm run e2e
@@ -214,7 +220,7 @@ cd web/taskflow-web && npx playwright install chromium && npm run e2e
 | Unitarios | Reglas del dominio: tareas, proyectos, comentarios, posiciones del board, agrupado de carpetas, cursores. |
 | Arquitectura | Que `Domain` y `Application` no dependan de capas externas. |
 | Integración | La API completa contra un PostgreSQL real levantado con Testcontainers. |
-| Navegador | Ocho flujos con Playwright contra las imágenes de Docker: sesión, board con mouse y teclado, detalle, aislamiento, solo lectura y tiempo real entre dos navegadores. |
+| Navegador | Nueve flujos con Playwright contra las imágenes de Docker: sesión, board con mouse y teclado, detalle, aislamiento, solo lectura, tiempo real entre dos navegadores y límites del plan. |
 
 Algunos de los que más dicen sobre el sistema:
 
@@ -245,6 +251,8 @@ devuelven siempre como `ProblemDetails` (RFC 9457).
 | POST | `/auth/switch-workspace` | miembro | Cambia de workspace |
 | GET | `/auth/me` | — | Usuario y sus workspaces |
 | GET / POST | `/workspaces` | — | Mis workspaces / crear uno |
+| GET | `/workspaces/current` | Viewer | Plan del workspace y uso de cada límite |
+| PUT | `/workspaces/current/plan` | Owner | Cambiar de plan |
 | GET / POST | `/workspaces/current/members` | Viewer / Admin | Miembros / agregar uno |
 | GET / POST | `/projects` | Viewer / Member | Listar (`?includeArchived=true`) / crear |
 | GET / PATCH / DELETE | `/projects/{id}` | Viewer / Member / Admin | Detalle / editar / borrar con sus tareas |
@@ -298,6 +306,8 @@ En desarrollo, la especificación OpenAPI está en `/openapi/v1.json`.
   aplicación consulta periódicamente en vez de recibir webhooks. Sin token, el límite es de 60 consultas por
   hora, y cada sincronización importa como mucho 15 commits.
 - Dos pestañas que renuevan la sesión exactamente a la vez pueden cerrar la sesión de ambas.
+- Los límites del plan se comprueban antes de insertar: dos altas simultáneas en el último cupo pueden excederlo
+  por uno. Alcanza para un límite de producto; uno de facturación estricta pediría un bloqueo por workspace.
 - El tiempo real funciona con una sola instancia de la API. Para varias haría falta un backplane (Redis) que
   reparta los avisos entre ellas.
 - No hay modo claro.
@@ -306,4 +316,7 @@ En desarrollo, la especificación OpenAPI está en `/openapi/v1.json`.
 
 - **Despliegue** en un servicio en la nube, con HTTPS y publicación de las imágenes.
 - **Invitaciones por email** y webhooks de GitHub.
+- **Row-Level Security** en PostgreSQL como segunda capa de aislamiento. Requiere que la aplicación se conecte
+  con un rol que no sea superusuario (los superusuarios se saltan RLS), y por eso quedó fuera de esta versión.
+- **Cobro real** de los planes con un proveedor de pagos.
 - **Cobertura de tests** medida y publicada en cada corrida del CI.

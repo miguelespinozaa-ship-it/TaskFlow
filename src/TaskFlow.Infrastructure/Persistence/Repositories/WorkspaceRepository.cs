@@ -12,6 +12,11 @@ internal sealed class WorkspaceRepository(AppDbContext db) : IWorkspaceRepositor
 
     public void AddMember(WorkspaceMember member) => db.WorkspaceMembers.Add(member);
 
+    public Task<Workspace?> GetAsync(Guid id, CancellationToken ct) => db.Workspaces.FirstOrDefaultAsync(w => w.Id == id, ct);
+
+    public Task<int> CountMembersAsync(Guid workspaceId, CancellationToken ct) =>
+        db.WorkspaceMembers.IgnoreQueryFilters().CountAsync(m => m.WorkspaceId == workspaceId, ct);
+
     public Task<bool> SlugExistsAsync(string slug, CancellationToken ct) =>
         db.Workspaces.AnyAsync(w => w.Slug == slug, ct);
 

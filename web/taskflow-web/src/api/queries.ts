@@ -15,7 +15,9 @@ import type {
   TaskPriority,
   TaskQuery,
   TaskStatus,
+  WorkspacePlan,
   WorkspaceRole,
+  WorkspaceUsage,
   WorkspaceSummary,
 } from './types'
 
@@ -23,6 +25,7 @@ import type {
 export const keys = {
   workspaces: ['workspaces'] as const,
   members: ['members'] as const,
+  usage: ['usage'] as const,
   projects: ['projects'] as const,
   labels: ['labels'] as const,
   board: (projectId: string) => ['tasks', 'board', projectId] as const,
@@ -234,7 +237,10 @@ export function useAddMember() {
   return useMutation({
     mutationFn: (input: { email: string; role: Exclude<WorkspaceRole, 'Owner'> }) =>
       request<Member>('/workspaces/current/members', { method: 'POST', json: input }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.members }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.members })
+      qc.invalidateQueries({ queryKey: keys.usage }) // el contador de miembros del plan
+    },
   })
 }
 
@@ -284,3 +290,16 @@ export const useSyncRepository = (projectId: string) =>
 
 export const useUnlinkRepository = (projectId: string) =>
   useRepositoryMutation(projectId, () => request<void>(`/projects/${projectId}/repository`, { method: 'DELETE' }))
+
+// ---------- Plan del workspace ----------
+
+export const useWorkspaceUsage = () =>
+  useQuery({ queryKey: keys.usage, queryFn: () => request<WorkspaceUsage>('/workspaces/current') })
+
+export function useChangePlan() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (plan: WorkspacePlan) => request<WorkspaceUsage>('/workspaces/current/plan', { method: 'PUT', json: { plan } }),
+    onSuccess: (usage) => qc.setQueryData(keys.usage, usage),
+  })
+}

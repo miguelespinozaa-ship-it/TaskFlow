@@ -13,6 +13,7 @@ internal sealed class WorkspaceConfiguration : IEntityTypeConfiguration<Workspac
         builder.Property(w => w.Id).ValueGeneratedNever();
         builder.Property(w => w.Name).HasMaxLength(100).IsRequired();
         builder.Property(w => w.Slug).HasMaxLength(60).IsRequired();
+        builder.Property(w => w.Plan).HasConversion<string>().HasMaxLength(20).HasDefaultValue(WorkspacePlan.Free);
         builder.HasIndex(w => w.Slug).IsUnique();
     }
 }

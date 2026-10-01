@@ -40,6 +40,17 @@ export interface AuthResponse {
   workspace: CurrentWorkspace
 }
 
+export type WorkspacePlan = 'Free' | 'Pro'
+
+/** Plan del workspace y uso de cada límite. Un máximo null significa "sin tope". */
+export interface WorkspaceUsage {
+  plan: WorkspacePlan
+  members: number
+  maxMembers: number | null
+  projects: number
+  maxProjects: number | null
+}
+
 export interface Member {
   userId: string
   email: string

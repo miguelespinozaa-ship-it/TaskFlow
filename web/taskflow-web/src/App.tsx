@@ -170,7 +170,7 @@ function Shell({ session }: { session: AuthResponse }) {
         )}
         {tab === 'search' && <SearchView onOpen={openTask} />}
         {tab === 'activity' && <ActivityList />}
-        {tab === 'members' && <MembersView isAdmin={isAdmin} currentUserId={session.user.id} />}
+        {tab === 'members' && <MembersView isAdmin={isAdmin} isOwner={role === 'Owner'} currentUserId={session.user.id} />}
       </main>
 
       {openTaskId && (

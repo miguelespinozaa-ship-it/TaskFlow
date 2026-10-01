@@ -3,6 +3,7 @@ using TaskFlow.Application.Abstractions;
 using TaskFlow.Application.Common;
 using TaskFlow.Application.Common.Exceptions;
 using TaskFlow.Domain.Projects;
+using TaskFlow.Domain.Workspaces;
 
 namespace TaskFlow.Application.Projects;
 
@@ -44,6 +45,7 @@ public interface IProjectService
 
 public sealed class ProjectService(
     IProjectRepository projects,
+    IWorkspaceRepository workspaces,
     ITaskRepository tasks,
     IUnitOfWork unitOfWork,
     ITenantContext tenant,
@@ -59,6 +61,13 @@ public sealed class ProjectService(
     public async Task<ProjectDto> CreateAsync(CreateProjectRequest request, CancellationToken ct)
     {
         await validator.ValidateAsync(request, ct);
+
+        // ponytail: comprobar-y-después-insertar; dos altas simultáneas en el último cupo pueden pasarse por uno.
+        // Si el límite pasara a ser de facturación estricta: lock por workspace (pg_advisory_xact_lock).
+        var workspace = await workspaces.GetAsync(tenant.RequireWorkspaceId(), ct)
+            ?? throw new NotFoundException("Workspace no encontrado.");
+        if (workspace.Plan.MaxProjects() is int max && await projects.CountAsync(ct) >= max)
+            throw new PlanLimitExceededException($"El plan {workspace.Plan} permite hasta {max} proyectos. Cambia de plan para crear más.");
 
         // El prefijo identifica al proyecto en tarjetas y búsquedas: dos proyectos con el mismo se confunden.
         // El repo consulta con el filtro de tenant, así que otro workspace sí puede usar el mismo.

@@ -7,6 +7,11 @@ public sealed record WorkspaceSummaryDto(Guid Id, string Name, string Slug, Work
 
 public sealed record MemberDto(Guid UserId, string Email, string DisplayName, WorkspaceRole Role, DateTime JoinedAt);
 
+/// <summary>Plan del workspace y cuánto lleva usado de cada límite (límite null = sin tope).</summary>
+public sealed record WorkspaceUsageDto(WorkspacePlan Plan, int Members, int? MaxMembers, int Projects, int? MaxProjects);
+
+public sealed record ChangePlanRequest(WorkspacePlan Plan);
+
 public sealed record CreateWorkspaceRequest(string Name, string Slug);
 
 public sealed record AddMemberRequest(string Email, WorkspaceRole Role);

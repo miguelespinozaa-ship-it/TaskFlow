@@ -11,10 +11,13 @@ public interface IWorkspaceService
     Task<IReadOnlyList<WorkspaceSummaryDto>> ListMineAsync(CancellationToken ct);
     Task<IReadOnlyList<MemberDto>> ListMembersAsync(CancellationToken ct);
     Task<MemberDto> AddMemberAsync(AddMemberRequest request, CancellationToken ct);
+    Task<WorkspaceUsageDto> GetUsageAsync(CancellationToken ct);
+    Task<WorkspaceUsageDto> ChangePlanAsync(ChangePlanRequest request, CancellationToken ct);
 }
 
 public sealed class WorkspaceService(
     IWorkspaceRepository workspaces,
+    IProjectRepository projects,
     IUserDirectory userDirectory,
     IUnitOfWork unitOfWork,
     ICurrentUser currentUser,
@@ -57,10 +60,32 @@ public sealed class WorkspaceService(
         if (await workspaces.IsMemberAsync(workspaceId, userId, ct))
             throw new ConflictException("Ese usuario ya es miembro del workspace.");
 
+        var workspace = await RequireCurrentAsync(ct);
+        if (workspace.Plan.MaxMembers() is int max && await workspaces.CountMembersAsync(workspaceId, ct) >= max)
+            throw new PlanLimitExceededException($"El plan {workspace.Plan} permite hasta {max} miembros. Cambia de plan para sumar más.");
+
         workspaces.AddMember(WorkspaceMember.Create(workspaceId, userId, request.Role, clock.GetUtcNow().UtcDateTime));
         await unitOfWork.SaveChangesAsync(ct);
 
         var members = await workspaces.ListMembersAsync(workspaceId, ct);
         return members.Single(m => m.UserId == userId);
     }
+
+    public async Task<WorkspaceUsageDto> GetUsageAsync(CancellationToken ct) => await UsageAsync(await RequireCurrentAsync(ct), ct);
+
+    public async Task<WorkspaceUsageDto> ChangePlanAsync(ChangePlanRequest request, CancellationToken ct)
+    {
+        var workspace = await RequireCurrentAsync(ct);
+        workspace.ChangePlan(request.Plan);
+        await unitOfWork.SaveChangesAsync(ct);
+        return await UsageAsync(workspace, ct);
+    }
+
+    private async Task<WorkspaceUsageDto> UsageAsync(Workspace workspace, CancellationToken ct) => new(
+        workspace.Plan,
+        await workspaces.CountMembersAsync(workspace.Id, ct), workspace.Plan.MaxMembers(),
+        await projects.CountAsync(ct), workspace.Plan.MaxProjects());
+
+    private async Task<Workspace> RequireCurrentAsync(CancellationToken ct) =>
+        await workspaces.GetAsync(tenant.RequireWorkspaceId(), ct) ?? throw new NotFoundException("Workspace no encontrado.");
 }

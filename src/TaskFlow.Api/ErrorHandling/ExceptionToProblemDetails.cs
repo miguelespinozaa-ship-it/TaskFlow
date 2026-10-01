@@ -22,6 +22,7 @@ public sealed class ExceptionToProblemDetails(
             NotFoundException => (StatusCodes.Status404NotFound, ex.Message),
             UnauthorizedException => (StatusCodes.Status401Unauthorized, ex.Message),
             ConflictException => (StatusCodes.Status409Conflict, ex.Message),
+            PlanLimitExceededException => (StatusCodes.Status402PaymentRequired, ex.Message),
             ForbiddenException or ForbiddenDomainException => (StatusCodes.Status403Forbidden, ex.Message),
             ValidationException => (StatusCodes.Status400BadRequest, "La solicitud no es válida."),
             DomainException => (StatusCodes.Status422UnprocessableEntity, ex.Message),

@@ -7,9 +7,18 @@ public sealed partial class Workspace : Entity
 {
     public string Name { get; private set; } = null!;
     public string Slug { get; private set; } = null!;
+    public WorkspacePlan Plan { get; private set; }
     public DateTime CreatedAt { get; private init; }
 
     private Workspace() { } // EF Core
+
+    /// <summary>Bajar a Free con más uso del permitido es válido: lo existente se conserva, no se puede agregar más.</summary>
+    public void ChangePlan(WorkspacePlan plan)
+    {
+        if (!Enum.IsDefined(plan))
+            throw new DomainException("Plan inválido.");
+        Plan = plan;
+    }
 
     public static Workspace Create(string name, string slug, DateTime utcNow)
     {

@@ -7,6 +7,8 @@ public interface IWorkspaceRepository
 {
     void Add(Workspace workspace);
     void AddMember(WorkspaceMember member);
+    Task<Workspace?> GetAsync(Guid id, CancellationToken ct);
+    Task<int> CountMembersAsync(Guid workspaceId, CancellationToken ct);
     Task<bool> SlugExistsAsync(string slug, CancellationToken ct);
     Task<bool> IsMemberAsync(Guid workspaceId, Guid userId, CancellationToken ct);
 

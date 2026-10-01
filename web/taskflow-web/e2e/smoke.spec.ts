@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { column, createProject, createTask, drag, login, register, titles } from './helpers'
+import { column, createProject, createTask, drag, login, PASSWORD, register, titles, uniqueEmail } from './helpers'
 
 test('registro, cierre de sesión e inicio: la sesión sobrevive a una recarga sin exponer tokens', async ({ page }) => {
   const email = await register(page)
@@ -171,4 +171,39 @@ test('tiempo real: lo que hace una persona aparece en el navegador de otra sin r
 
   await drag(ownerPage, column(ownerPage, 'Por hacer').getByLabel('Creada por Omar', { exact: true }), column(ownerPage, 'Hecho'))
   await expect(column(memberPage, 'Hecho').getByLabel('Creada por Omar', { exact: true })).toBeVisible()
+})
+
+test('plan Free: el cuarto miembro se rechaza hasta pasar a Pro', async ({ page, request }) => {
+  // Tres cuentas más, creadas por la API: lo que se prueba acá es el límite, no el formulario de registro.
+  const emails: string[] = []
+  for (let i = 0; i < 3; i++) {
+    const email = uniqueEmail()
+    const res = await request.post('/api/v1/auth/register', { data: { email, password: PASSWORD, displayName: `Invitada ${i + 1}` } })
+    expect(res.ok()).toBeTruthy()
+    emails.push(email)
+  }
+
+  await register(page, 'Olga Dueña')
+  await page.getByRole('button', { name: 'Miembros' }).click()
+  const plan = page.getByRole('region', { name: 'Plan del workspace' })
+  await expect(plan.getByText('Plan Free')).toBeVisible()
+
+  const invite = async (email: string) => {
+    await page.getByLabel('Email del miembro').fill(email)
+    await page.getByRole('button', { name: 'Agregar miembro' }).click()
+  }
+  await invite(emails[0])
+  await expect(page.getByText('Invitada 1', { exact: true })).toBeVisible()
+  await invite(emails[1])
+  await expect(page.getByText('Invitada 2', { exact: true })).toBeVisible()
+  await expect(plan.getByText('3 de 3')).toBeVisible()
+
+  await invite(emails[2])
+  await expect(page.getByRole('alert').filter({ hasText: 'hasta 3 miembros' })).toBeVisible()
+  await expect(page.getByText('Invitada 3', { exact: true })).toHaveCount(0)
+
+  await plan.getByRole('button', { name: 'Pasar a Pro' }).click()
+  await expect(plan.getByText('Plan Pro')).toBeVisible()
+  await invite(emails[2])
+  await expect(page.getByText('Invitada 3', { exact: true })).toBeVisible()
 })
