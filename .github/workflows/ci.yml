@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Un push nuevo a la misma rama cancela la corrida anterior, que ya no interesa.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: API (.NET)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      # TreatWarningsAsErrors está activo: un warning rompe el build.
+      - run: dotnet build TaskFlow.slnx -c Release
+      # Los tests de integración levantan PostgreSQL con Testcontainers; el runner ya trae Docker.
+      - run: dotnet test --solution TaskFlow.slnx -c Release --no-build
+
+  frontend:
+    name: Frontend (build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web/taskflow-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/taskflow-web/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  e2e:
+    name: Navegador (Docker + Playwright)
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    env:
+      # Las pruebas registran muchos usuarios desde una sola IP: se sube el límite de intentos solo acá.
+      AUTH_RATE_LIMIT: "1000"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Levantar el sistema completo
+        run: JWT_SECRET=$(openssl rand -base64 48) docker compose --profile app up -d --build --wait
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/taskflow-web/package-lock.json
+      - working-directory: web/taskflow-web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npx playwright test
+      - name: Logs de los contenedores
+        if: failure()
+        run: docker compose --profile app logs --no-color
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: web/taskflow-web/playwright-report

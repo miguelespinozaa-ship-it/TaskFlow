@@ -6,7 +6,9 @@ commits de GitHub de cada proyecto explicados carpeta por carpeta.
 
 ASP.NET Core 10 · EF Core · PostgreSQL · React 19 · TypeScript
 
-**Versión 1.0** — funcional de punta a punta, con 233 tests automáticos.
+[![CI](https://github.com/miguelespinozaa-ship-it/TaskFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/miguelespinozaa-ship-it/TaskFlow/actions/workflows/ci.yml)
+
+**Versión 1.0** — funcional de punta a punta, con 240 tests automáticos y 7 pruebas de navegador que corren en cada push.
 
 ![Board de un proyecto con cuatro columnas y tarjetas con prioridad, etiquetas, vencimiento y persona asignada](docs/screenshots/board.png)
 
@@ -63,15 +65,33 @@ ASP.NET Core 10 · EF Core · PostgreSQL · React 19 · TypeScript
   ninguno de los dos es legible desde JavaScript.
 - El token de renovación cambia en cada uso. Si alguien presenta uno ya usado, se cierran todas las sesiones
   de esa familia.
+- Límite de intentos de login y registro por dirección IP.
+
+**Operación**
+- `/health/live` (el proceso responde) y `/health/ready` (llega a la base), separados para que una caída de
+  PostgreSQL saque a la API del balanceador sin reiniciarla en bucle.
+- Logs estructurados en JSON, con el usuario, el workspace y el identificador de traza de cada pedido.
+- Integración continua: cada push compila, corre los tests, construye las imágenes y ejecuta las pruebas de navegador.
 
 ## Cómo correrlo
 
-Requisitos: **.NET 10 SDK**, **Docker** y **Node 20** o superior.
+### Con Docker (solo hace falta Docker)
 
 ```bash
 git clone git@github.com:miguelespinozaa-ship-it/TaskFlow.git
 cd TaskFlow
+cp .env.example .env          # y completa JWT_SECRET (el archivo explica cómo generarla)
+docker compose --profile app up --build
+```
 
+La aplicación queda en **http://localhost:8080**. La API aplica las migraciones al arrancar y no se publica
+en el host: solo se llega a ella a través de nginx, que sirve el frontend y reenvía `/api`.
+
+### Para desarrollar
+
+Requisitos: **.NET 10 SDK**, **Docker** y **Node 20** o superior.
+
+```bash
 docker compose up -d postgres
 
 dotnet tool restore
@@ -84,7 +104,7 @@ npm install
 npm run dev                                    # app en http://localhost:5173
 ```
 
-En modo desarrollo la API crea un workspace "Demo" con tres usuarios, todos con la contraseña `Demo1234`:
+En modo desarrollo (y en Docker, salvo que se desactive con `SEED_DEMO_DATA=false`) la API crea un workspace "Demo" con tres usuarios, todos con la contraseña `Demo1234`:
 
 | Email | Rol |
 |---|---|
@@ -99,6 +119,8 @@ Configuración opcional, por variables de entorno:
 | `Jwt__Secret` | Clave de firma de los tokens. **Obligatoria fuera de desarrollo** (la del repositorio es solo para desarrollo local). |
 | `GitHub__Token` | Sube el límite de la API de GitHub de 60 a 5000 consultas por hora. Alcanza con un token sin permisos. |
 | `GitHub__SyncIntervalMinutes` | Cada cuánto se sincronizan los repositorios (por defecto 5; 0 lo desactiva). |
+| `RateLimiting__Auth__PermitLimit` | Intentos de login o registro por IP y por minuto (por defecto 10). |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Si está definida, las trazas se exportan por OTLP a ese colector. |
 | `PORT` y `API_URL` | Puerto del frontend y dirección de la API, para `npm run dev`. |
 
 ## Arquitectura
@@ -176,7 +198,10 @@ llegan a depender de EF Core, de ASP.NET o de una capa externa.
 ## Tests
 
 ```bash
-dotnet test --solution TaskFlow.slnx     # 233 tests; los de integración necesitan Docker
+dotnet test --solution TaskFlow.slnx     # 240 tests; los de integración necesitan Docker
+
+# pruebas de navegador, contra el sistema levantado con Docker (AUTH_RATE_LIMIT=1000 en .env)
+cd web/taskflow-web && npx playwright install chromium && npm run e2e
 ```
 
 | Tipo | Qué prueba |
@@ -184,6 +209,7 @@ dotnet test --solution TaskFlow.slnx     # 233 tests; los de integración necesi
 | Unitarios | Reglas del dominio: tareas, proyectos, comentarios, posiciones del board, agrupado de carpetas, cursores. |
 | Arquitectura | Que `Domain` y `Application` no dependan de capas externas. |
 | Integración | La API completa contra un PostgreSQL real levantado con Testcontainers. |
+| Navegador | Siete flujos con Playwright contra las imágenes de Docker: sesión, board con mouse y teclado, detalle, aislamiento y solo lectura. |
 
 Algunos de los que más dicen sobre el sistema:
 
@@ -234,6 +260,8 @@ devuelven siempre como `ProblemDetails` (RFC 9457).
 | POST | `/projects/{id}/repository/sync` | Member | Importar commits nuevos |
 | GET | `/projects/{id}/commits` | Viewer | Commits con sus carpetas, paginados |
 
+Fuera de `/api/v1`: `GET /health/live` y `GET /health/ready`, públicos.
+
 En desarrollo, la especificación OpenAPI está en `/openapi/v1.json`.
 
 ## Problemas que aparecieron y cómo se resolvieron
@@ -269,9 +297,7 @@ En desarrollo, la especificación OpenAPI está en `/openapi/v1.json`.
 
 ## Próximos pasos
 
-- **Docker y despliegue**: imagen de la API y del frontend, y `docker compose` con todo el sistema.
-- **Integración continua**: GitHub Actions que compile, corra los tests y bloquee el merge si fallan.
-- **Operación**: endpoints de salud separados (vivo / listo), límite de intentos en el login y logs estructurados.
+- **Despliegue** en un servicio en la nube, con HTTPS y publicación de las imágenes.
 - **Tiempo real**: que el board se actualice solo entre navegadores con SignalR.
 - **Invitaciones por email** y webhooks de GitHub.
-- **Pruebas de navegador** con Playwright dentro del repositorio.
+- **Cobertura de tests** medida y publicada en cada corrida del CI.
