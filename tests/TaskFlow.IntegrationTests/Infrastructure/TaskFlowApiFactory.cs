@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using TaskFlow.Application.Abstractions;
 using TaskFlow.Domain.Projects;
 using TaskFlow.Domain.Workspaces;
 using TaskFlow.Infrastructure.Persistence;
@@ -17,11 +20,22 @@ public sealed class TaskFlowApiFactory : WebApplicationFactory<Program>, IAsyncL
 {
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17-alpine").Build();
 
+    public FakeGitHubClient GitHub { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Postgres", _postgres.GetConnectionString());
         builder.UseSetting("Jwt:Secret", "integration-tests-secret-0123456789-abcdefghijklmnop");
+        // Sin sincronizador de fondo: los tests disparan la sincronización a mano y de forma determinista.
+        builder.UseSetting("GitHub:SyncIntervalMinutes", "0");
+
+        // GitHub falso en memoria: los tests no dependen de la red ni gastan el límite de la API real.
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IGitHubClient>();
+            services.AddSingleton<IGitHubClient>(GitHub);
+        });
     }
 
     public async ValueTask InitializeAsync()
