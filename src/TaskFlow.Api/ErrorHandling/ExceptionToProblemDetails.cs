@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using TaskFlow.Application.Abstractions;
 using TaskFlow.Application.Common.Exceptions;
 using TaskFlow.Domain.Common;
 
@@ -24,6 +25,8 @@ public sealed class ExceptionToProblemDetails(
             ForbiddenException or ForbiddenDomainException => (StatusCodes.Status403Forbidden, ex.Message),
             ValidationException => (StatusCodes.Status400BadRequest, "La solicitud no es válida."),
             DomainException => (StatusCodes.Status422UnprocessableEntity, ex.Message),
+            // Falla de un servicio externo, no del cliente ni nuestra: 503 y se puede reintentar.
+            GitHubUnavailableException => (StatusCodes.Status503ServiceUnavailable, ex.Message),
             // Red de seguridad: si dos requests pasan la validación "¿ya existe?" a la vez, el índice
             // único de la base rechaza al segundo. Eso es un 409, no un 500.
             DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } } =>
