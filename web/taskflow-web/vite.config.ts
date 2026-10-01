@@ -9,6 +9,10 @@ export default defineConfig({
     strictPort: true,
     // Mismo origen para el navegador: sin CORS y la cookie httpOnly de refresh viaja sola.
     // API_URL permite apuntar a otra instancia (p. ej. `API_URL=http://localhost:5081 npm run dev`).
-    proxy: { '/api': process.env.API_URL ?? 'http://localhost:5080' },
+    proxy: {
+      '/api': process.env.API_URL ?? 'http://localhost:5080',
+      // ws: true → el proxy también reenvía la conexión WebSocket del tiempo real.
+      '/hubs': { target: process.env.API_URL ?? 'http://localhost:5080', ws: true },
+    },
   },
 })

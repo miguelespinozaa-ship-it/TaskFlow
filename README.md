@@ -8,7 +8,7 @@ ASP.NET Core 10 · EF Core · PostgreSQL · React 19 · TypeScript
 
 [![CI](https://github.com/miguelespinozaa-ship-it/TaskFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/miguelespinozaa-ship-it/TaskFlow/actions/workflows/ci.yml)
 
-**Versión 1.0** — funcional de punta a punta, con 240 tests automáticos y 7 pruebas de navegador que corren en cada push.
+**Versión 1.0** — funcional de punta a punta, con 245 tests automáticos y 8 pruebas de navegador que corren en cada push.
 
 ![Board de un proyecto con cuatro columnas y tarjetas con prioridad, etiquetas, vencimiento y persona asignada](docs/screenshots/board.png)
 
@@ -52,6 +52,7 @@ ASP.NET Core 10 · EF Core · PostgreSQL · React 19 · TypeScript
   persona y etiqueta.
 - Historial automático: cada cambio queda registrado con quién lo hizo, el valor anterior y el nuevo.
 - Lo que se borra no se pierde: se marca como borrado y deja de mostrarse.
+- **Tiempo real**: lo que hace una persona aparece en el navegador de las demás sin recargar (SignalR).
 
 **Integración con GitHub**
 - Cada proyecto se puede conectar a un repositorio público.
@@ -191,14 +192,18 @@ llegan a depender de EF Core, de ASP.NET o de una capa externa.
 9. **Tokens de renovación guardados como hash**, con revocación atómica (`UPDATE … WHERE revoked_at IS NULL`):
    dos renovaciones simultáneas con el mismo token no pueden ganar las dos.
 10. **Cerrado por defecto.** Todo endpoint exige autenticación salvo que se marque explícitamente como público.
-11. **GitHub solo con repositorios públicos y consultas condicionales.** Si el servidor tuviera un token,
+11. **El aviso en tiempo real no lleva datos.** Solo dice "algo cambió en tu workspace"; cada navegador vuelve a
+    pedir lo que muestra con su propio token. El canal no puede filtrar nada que la API no entregaría, y el
+    grupo al que entra cada conexión sale del token firmado, no de un parámetro. Se dispara desde `SaveChanges`,
+    después de guardar, así que ningún caso de uso tiene que acordarse de notificar.
+12. **GitHub solo con repositorios públicos y consultas condicionales.** Si el servidor tuviera un token,
     cualquier workspace podría enlazar repositorios privados de su dueño; por eso se rechazan. Y cuando no hay
     commits nuevos, GitHub responde `304` y la consulta no descuenta del límite.
 
 ## Tests
 
 ```bash
-dotnet test --solution TaskFlow.slnx     # 240 tests; los de integración necesitan Docker
+dotnet test --solution TaskFlow.slnx     # 245 tests; los de integración necesitan Docker
 
 # pruebas de navegador, contra el sistema levantado con Docker (AUTH_RATE_LIMIT=1000 en .env)
 cd web/taskflow-web && npx playwright install chromium && npm run e2e
@@ -209,7 +214,7 @@ cd web/taskflow-web && npx playwright install chromium && npm run e2e
 | Unitarios | Reglas del dominio: tareas, proyectos, comentarios, posiciones del board, agrupado de carpetas, cursores. |
 | Arquitectura | Que `Domain` y `Application` no dependan de capas externas. |
 | Integración | La API completa contra un PostgreSQL real levantado con Testcontainers. |
-| Navegador | Siete flujos con Playwright contra las imágenes de Docker: sesión, board con mouse y teclado, detalle, aislamiento y solo lectura. |
+| Navegador | Ocho flujos con Playwright contra las imágenes de Docker: sesión, board con mouse y teclado, detalle, aislamiento, solo lectura y tiempo real entre dos navegadores. |
 
 Algunos de los que más dicen sobre el sistema:
 
@@ -293,11 +298,12 @@ En desarrollo, la especificación OpenAPI está en `/openapi/v1.json`.
   aplicación consulta periódicamente en vez de recibir webhooks. Sin token, el límite es de 60 consultas por
   hora, y cada sincronización importa como mucho 15 commits.
 - Dos pestañas que renuevan la sesión exactamente a la vez pueden cerrar la sesión de ambas.
+- El tiempo real funciona con una sola instancia de la API. Para varias haría falta un backplane (Redis) que
+  reparta los avisos entre ellas.
 - No hay modo claro.
 
 ## Próximos pasos
 
 - **Despliegue** en un servicio en la nube, con HTTPS y publicación de las imágenes.
-- **Tiempo real**: que el board se actualice solo entre navegadores con SignalR.
 - **Invitaciones por email** y webhooks de GitHub.
 - **Cobertura de tests** medida y publicada en cada corrida del CI.

@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using TaskFlow.Api.Authorization;
 using TaskFlow.Api.ErrorHandling;
 using TaskFlow.Api.Operations;
+using TaskFlow.Api.Realtime;
+using TaskFlow.Application.Abstractions;
 using TaskFlow.Application;
 using TaskFlow.Infrastructure;
 using TaskFlow.Infrastructure.Persistence;
@@ -24,6 +26,8 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddTaskFlowAuth();
 builder.Services.AddTaskFlowHealthChecks();
 builder.Services.AddTaskFlowRateLimiting();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IWorkspaceNotifier, SignalRWorkspaceNotifier>();
 
 // CORS con orígenes explícitos, nunca "*". En dev el front usa el proxy de Vite (mismo origen),
 // esto queda para cuando front y API se sirvan desde dominios distintos.
@@ -62,6 +66,7 @@ app.UseMiddleware<TenantResolutionMiddleware>(); // después de autenticar (nece
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<WorkspaceHub>(WorkspaceHub.Path);
 app.MapTaskFlowHealthChecks();
 
 await app.RunAsync();

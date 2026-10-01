@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { onSessionChange, refreshSession } from './api/client'
 import { auth, useWorkspaces } from './api/queries'
+import { useWorkspaceLive } from './api/realtime'
 import type { AuthResponse, WorkspaceRole } from './api/types'
 import { ActivityList } from './components/ActivityFeed'
 import { AuthScreen } from './components/AuthScreen'
@@ -72,6 +73,7 @@ function Shell({ session }: { session: AuthResponse }) {
   const [openTaskId, setOpenTaskId] = useState<string | null>(null)
   const [projectId, setProjectId] = useState<string>()
   const { data: workspaces } = useWorkspaces()
+  useWorkspaceLive() // el Shell se remonta al cambiar de workspace, así que la conexión también
   const role = session.workspace.role
   const canWrite = role !== 'Viewer' // la UI solo oculta; quien decide es la API (403)
   const isAdmin = role === 'Owner' || role === 'Admin'

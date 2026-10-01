@@ -27,6 +27,7 @@ public sealed class AppDbContext : IdentityUserContext<ApplicationUser, Guid>, I
     private readonly ITenantContext? _tenant;
     private readonly ICurrentUser? _currentUser;
     private readonly TimeProvider _clock;
+    private readonly IWorkspaceNotifier? _notifier;
     private Guid? _workspaceOverride;
     private bool _hasOverride;
 
@@ -34,11 +35,13 @@ public sealed class AppDbContext : IdentityUserContext<ApplicationUser, Guid>, I
         DbContextOptions<AppDbContext> options,
         ITenantContext? tenant = null,
         ICurrentUser? currentUser = null,
-        TimeProvider? clock = null) : base(options)
+        TimeProvider? clock = null,
+        IWorkspaceNotifier? notifier = null) : base(options)
     {
         _tenant = tenant;
         _currentUser = currentUser;
         _clock = clock ?? TimeProvider.System;
+        _notifier = notifier;
 
         // Por defecto EF marca como borrados a los dependientes EN EL MOMENTO del Remove(). Lo diferimos
         // a SaveChanges para que el soft delete convierta primero el Deleted en Modified: si no, borrar
@@ -128,13 +131,20 @@ public sealed class AppDbContext : IdentityUserContext<ApplicationUser, Guid>, I
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
-    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
-        BeforeSave();
-        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        var changedWorkspaces = BeforeSave();
+        var saved = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+
+        // Después de guardar, nunca antes: si el guardado falla, nadie recibe el aviso de un cambio que no existió.
+        if (_notifier is not null)
+            foreach (var workspaceId in changedWorkspaces)
+                await _notifier.WorkspaceChangedAsync(workspaceId, cancellationToken);
+        return saved;
     }
 
-    private void BeforeSave()
+    /// <returns>Workspaces con cambios auditables en este guardado (los que hay que avisar en tiempo real).</returns>
+    private HashSet<Guid> BeforeSave()
     {
         ChangeTracker.DetectChanges();
         var now = _clock.GetUtcNow().UtcDateTime;
@@ -143,7 +153,9 @@ public sealed class AppDbContext : IdentityUserContext<ApplicationUser, Guid>, I
         var softDeleted = ConvertDeletesToSoftDeletes(now);
         // La auditoría se escribe en el MISMO SaveChanges (misma transacción): no puede haber un
         // cambio sin su registro, ni un registro de un cambio que falló.
-        Activities.AddRange(AuditTrail.Build(ChangeTracker, softDeleted, _currentUser?.UserId, now));
+        var activities = AuditTrail.Build(ChangeTracker, softDeleted, _currentUser?.UserId, now).ToList();
+        Activities.AddRange(activities);
+        return [.. activities.Select(a => a.WorkspaceId)];
     }
 
     // Sin esto, un `new TaskItem()` sin WorkspaceId se persiste con tenant vacío y nunca

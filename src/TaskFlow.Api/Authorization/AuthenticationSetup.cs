@@ -23,6 +23,18 @@ public static class AuthenticationSetup
             {
                 var jwt = jwtOptions.Value;
                 // Sin esto, "sub" llega como "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier".
+                // Un WebSocket del navegador no puede mandar el header Authorization: SignalR envía el token en
+                // la query. Solo se acepta ahí para las rutas del hub, nunca para la API.
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        if (context.HttpContext.Request.Path.StartsWithSegments("/hubs")
+                            && context.Request.Query["access_token"].FirstOrDefault() is { Length: > 0 } token)
+                            context.Token = token;
+                        return Task.CompletedTask;
+                    },
+                };
                 options.MapInboundClaims = false;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {

@@ -145,3 +145,30 @@ test('un Viewer ve el board pero no puede crear, arrastrar ni editar', async ({ 
   await expect(viewerPage.getByRole('dialog').getByLabel('Título de la tarea')).toBeDisabled()
   await expect(viewerPage.getByRole('dialog').getByLabel('Comentario')).toHaveCount(0)
 })
+
+test('tiempo real: lo que hace una persona aparece en el navegador de otra sin recargar', async ({ browser }) => {
+  const ownerPage = await (await browser.newContext()).newPage()
+  const memberPage = await (await browser.newContext()).newPage()
+
+  const memberEmail = await register(memberPage, 'Marta Miembro')
+  await register(ownerPage, 'Omar Dueño')
+  await createProject(ownerPage, 'Proyecto en vivo')
+  await ownerPage.getByRole('button', { name: 'Miembros' }).click()
+  await ownerPage.getByLabel('Email del miembro').fill(memberEmail)
+  await ownerPage.getByRole('button', { name: 'Agregar miembro' }).click()
+  await expect(ownerPage.getByText('Marta Miembro', { exact: true })).toBeVisible()
+  await ownerPage.getByRole('button', { name: 'Board' }).click()
+
+  // Marta entra al workspace de Omar y se queda mirando el board, sin tocar nada más.
+  await memberPage.reload()
+  const workspace = memberPage.getByLabel('Workspace')
+  const option = await workspace.locator('option', { hasText: 'Omar Dueño' }).textContent()
+  await workspace.selectOption({ label: option!.trim() })
+  await expect(column(memberPage, 'Por hacer')).toBeVisible()
+
+  await createTask(ownerPage, 'Creada por Omar')
+  await expect(column(memberPage, 'Por hacer').getByLabel('Creada por Omar', { exact: true })).toBeVisible()
+
+  await drag(ownerPage, column(ownerPage, 'Por hacer').getByLabel('Creada por Omar', { exact: true }), column(ownerPage, 'Hecho'))
+  await expect(column(memberPage, 'Hecho').getByLabel('Creada por Omar', { exact: true })).toBeVisible()
+})

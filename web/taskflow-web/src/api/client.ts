@@ -18,6 +18,7 @@ export class ApiError extends Error {
 // El access token vive SOLO en memoria: no en localStorage (lo leería cualquier XSS).
 // Al recargar la página se pierde y se recupera con /auth/refresh usando la cookie httpOnly.
 let accessToken: string | null = null
+let expiresAt = 0
 const listeners = new Set<(session: AuthResponse | null) => void>()
 
 export function onSessionChange(listener: (session: AuthResponse | null) => void) {
@@ -27,6 +28,7 @@ export function onSessionChange(listener: (session: AuthResponse | null) => void
 
 export function setSession(session: AuthResponse | null) {
   accessToken = session?.accessToken ?? null
+  expiresAt = session ? new Date(session.expiresAt).getTime() : 0
   listeners.forEach((l) => l(session))
 }
 
@@ -81,4 +83,13 @@ export function toQueryString(params: Record<string, string | number | undefined
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== null && v !== '') qs.set(k, String(v))
   const s = qs.toString()
   return s ? `?${s}` : ''
+}
+
+/**
+ * Token vigente para la conexión en tiempo real. Una reconexión puede ocurrir horas después del login,
+ * con el token de 15 minutos ya vencido: en ese caso se renueva antes de entregarlo.
+ */
+export async function freshAccessToken(): Promise<string> {
+  if (accessToken && expiresAt - Date.now() > 30_000) return accessToken
+  return (await refreshSession())?.accessToken ?? ''
 }
