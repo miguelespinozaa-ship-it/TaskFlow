@@ -1,6 +1,19 @@
 import { useState, type FormEvent } from 'react'
 import { auth } from '../api/queries'
-import { Button, ErrorText, Input } from './ui'
+import { Icon, LogoMark, type IconName } from './icons'
+import { Button, cx, ErrorText, Input } from './ui'
+
+const DEMO_ACCOUNTS = [
+  { role: 'Owner', email: 'demo@taskflow.dev', hint: 'todo' },
+  { role: 'Member', email: 'member@taskflow.dev', hint: 'edita' },
+  { role: 'Viewer', email: 'viewer@taskflow.dev', hint: 'solo lee' },
+]
+
+const FEATURES: { icon: IconName; title: string; text: string }[] = [
+  { icon: 'board', title: 'Board con drag & drop', text: 'Mové tareas entre columnas con el mouse o el teclado.' },
+  { icon: 'shield', title: 'Workspaces aislados', text: 'Cada equipo ve solo lo suyo, con roles y permisos.' },
+  { icon: 'activity', title: 'Historial de cambios', text: 'Quién cambió qué y cuándo, en cada tarea.' },
+]
 
 export function AuthScreen() {
   const [mode, setMode] = useState<'login' | 'register'>('login')
@@ -25,40 +38,103 @@ export function AuthScreen() {
   }
 
   return (
-    <main className="mx-auto mt-[12vh] max-w-sm animate-rise px-4">
-      <h1 className="logo mb-2 text-center text-4xl font-bold tracking-tight">TaskFlow</h1>
-      <p className="mb-6 text-center font-display text-xs tracking-widest text-dim uppercase">gestión de proyectos multi-tenant</p>
+    <main className="mx-auto grid min-h-dvh max-w-5xl animate-rise items-center gap-10 px-4 py-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+      <section className="flex flex-col items-center text-center lg:items-start lg:text-left">
+        <div className="flex items-center gap-3">
+          <LogoMark className="size-10 lg:size-12" />
+          <h1 className="logo text-4xl font-bold tracking-tight lg:text-5xl">TaskFlow</h1>
+        </div>
+        <p className="mt-3 font-display text-xs tracking-widest text-dim uppercase">gestión de proyectos multi-tenant</p>
+        <p className="mt-6 hidden max-w-md text-2xl leading-snug font-semibold text-ink lg:block">
+          El trabajo de tu equipo, <span className="text-neon">ordenado</span> y a la vista.
+        </p>
+        <ul className="stagger mt-8 hidden flex-col gap-4 lg:flex">
+          {FEATURES.map((f) => (
+            <li key={f.title} className="flex items-start gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-line bg-panel/70 text-neon">
+                <Icon name={f.icon} />
+              </span>
+              <div>
+                <p className="text-sm font-medium text-ink">{f.title}</p>
+                <p className="text-sm text-dim">{f.text}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <form
         onSubmit={submit}
-        className="flex flex-col gap-3 rounded-xl border border-line bg-panel/80 p-6 shadow-violet backdrop-blur-sm"
+        className="mx-auto flex w-full max-w-sm flex-col gap-4 self-start rounded-2xl border border-line bg-panel/80 p-6 shadow-violet backdrop-blur-sm lg:self-center"
       >
-        <h2 className="text-lg font-semibold">{mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}</h2>
+        <div>
+          <h2 className="text-xl font-semibold">{mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}</h2>
+          <p className="mt-1 text-sm text-dim">{mode === 'login' ? 'Entrá a tu workspace.' : 'Se crea un workspace personal para vos.'}</p>
+        </div>
         {mode === 'register' && (
-          <Input placeholder="Nombre" value={displayName} onChange={(e) => setDisplayName(e.target.value)} aria-label="Nombre" required />
+          <Field label="Nombre">
+            <Input placeholder="Cómo te ven los demás" value={displayName} onChange={(e) => setDisplayName(e.target.value)} aria-label="Nombre" autoComplete="name" required />
+          </Field>
         )}
-        <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" required />
-        <Input
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          aria-label="Contraseña"
-          required
-        />
-        {mode === 'register' && <p className="text-xs text-dim">Mínimo 8 caracteres, con mayúscula, minúscula y número.</p>}
+        <Field label="Email">
+          <Input type="email" placeholder="vos@empresa.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" autoComplete="email" required />
+        </Field>
+        <Field label="Contraseña" hint={mode === 'register' ? 'Mínimo 8 caracteres, con mayúscula, minúscula y número.' : undefined}>
+          <Input
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            aria-label="Contraseña"
+            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+            required
+          />
+        </Field>
         <ErrorText error={error} />
-        <Button type="submit" disabled={busy}>
+        <Button type="submit" disabled={busy} className="py-2">
           {busy ? '…' : mode === 'login' ? 'Entrar' : 'Registrarme'}
         </Button>
         <Button type="button" variant="ghost" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
           {mode === 'login' ? '¿No tenés cuenta? Registrate' : '¿Ya tenés cuenta? Iniciá sesión'}
         </Button>
         {mode === 'login' && (
-          <p className="text-center text-xs text-dim">
-            Demo: demo@ · member@ · viewer@taskflow.dev — contraseña <code>Demo1234</code>
-          </p>
+          <div className="border-t border-line/70 pt-4">
+            <p className="mb-2 flex items-center gap-1.5 text-xs text-dim">
+              <Icon name="bolt" className="size-3.5 text-amber" />
+              Cuentas de demo — tocá una para completar el formulario
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {DEMO_ACCOUNTS.map((a) => (
+                <button
+                  key={a.role}
+                  type="button"
+                  title={a.email}
+                  onClick={() => {
+                    setEmail(a.email)
+                    setPassword('Demo1234')
+                    setError(undefined)
+                  }}
+                  className={cx(
+                    'flex flex-col items-center rounded-lg border px-2 py-1.5 transition duration-150 hover:border-violet hover:bg-raised/60 focus-visible:outline-2 focus-visible:outline-neon active:scale-95',
+                    email === a.email ? 'border-neon/60 bg-neon/10' : 'border-line bg-void/40',
+                  )}
+                >
+                  <span className="font-display text-xs font-semibold text-ink">{a.role}</span>
+                  <span className="text-[11px] text-dim">{a.hint}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         )}
       </form>
     </main>
   )
 }
+
+const Field = ({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) => (
+  <label className="flex flex-col gap-1.5 text-sm">
+    <span className="text-dim">{label}</span>
+    {children}
+    {hint && <span className="text-xs text-dim">{hint}</span>}
+  </label>
+)
