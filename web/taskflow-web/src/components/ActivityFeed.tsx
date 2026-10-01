@@ -2,7 +2,7 @@ import { useLabels, useMembers, useActivity } from '../api/queries'
 import { PRIORITIES, STATUSES, type Activity } from '../api/types'
 import { Avatar, Button, cx, Empty, ErrorText, formatDateTime, ListSkeleton, Skeleton, timeAgo } from './ui'
 
-const entityNames: Record<string, string> = { task: 'la tarea', project: 'el proyecto', comment: 'un comentario', label: 'la etiqueta' }
+const entityNames: Record<string, string> = { task: 'la tarea', project: 'el proyecto', comment: 'un comentario', label: 'la etiqueta', repository: 'el repositorio' }
 const fieldNames: Record<string, string> = {
   title: 'título',
   name: 'nombre',

@@ -7,7 +7,10 @@ import type {
   CursorPage,
   Label,
   Member,
+  Commit,
   Project,
+  Repository,
+  SyncResult,
   Task,
   TaskPriority,
   TaskQuery,
@@ -27,6 +30,8 @@ export const keys = {
   search: (q: TaskQuery) => ['tasks', 'search', q] as const,
   comments: (taskId: string) => ['comments', taskId] as const,
   activity: (entityId?: string) => ['activity', entityId ?? 'all'] as const,
+  repository: (projectId: string) => ['repository', projectId] as const,
+  commits: (projectId: string) => ['commits', projectId] as const,
 }
 
 // ---------- Sesión ----------
@@ -232,3 +237,50 @@ export function useAddMember() {
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.members }),
   })
 }
+
+// ---------- Repositorio de GitHub ----------
+
+/** null = el proyecto no tiene repositorio conectado (la API responde 204). */
+export const useRepository = (projectId: string | undefined) =>
+  useQuery({
+    queryKey: keys.repository(projectId ?? ''),
+    queryFn: async () => (await request<Repository | undefined>(`/projects/${projectId}/repository`)) ?? null,
+    enabled: !!projectId,
+  })
+
+export const useCommits = (projectId: string | undefined, enabled: boolean) =>
+  useInfiniteQuery({
+    queryKey: keys.commits(projectId ?? ''),
+    queryFn: ({ pageParam }) =>
+      request<CursorPage<Commit>>(`/projects/${projectId}/commits${toQueryString({ cursor: pageParam, pageSize: 20 })}`),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    enabled: enabled && !!projectId,
+    // El servidor sincroniza solo cada pocos minutos: la lista abierta se refresca para mostrar lo nuevo.
+    refetchInterval: 60_000,
+  })
+
+/** Conectar, sincronizar y desconectar cambian el enlace, la lista de commits y el historial. */
+function useRepositoryMutation<TInput, TResult>(projectId: string, mutationFn: (input: TInput) => Promise<TResult>) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn,
+    // onSettled y no onSuccess: una sincronización fallida igual cambia el enlace (guarda el error).
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: keys.repository(projectId) })
+      qc.invalidateQueries({ queryKey: keys.commits(projectId) })
+      qc.invalidateQueries({ queryKey: ['activity'] })
+    },
+  })
+}
+
+export const useLinkRepository = (projectId: string) =>
+  useRepositoryMutation(projectId, (repository: string) =>
+    request<SyncResult>(`/projects/${projectId}/repository`, { method: 'PUT', json: { repository } }),
+  )
+
+export const useSyncRepository = (projectId: string) =>
+  useRepositoryMutation(projectId, () => request<SyncResult>(`/projects/${projectId}/repository/sync`, { method: 'POST' }))
+
+export const useUnlinkRepository = (projectId: string) =>
+  useRepositoryMutation(projectId, () => request<void>(`/projects/${projectId}/repository`, { method: 'DELETE' }))

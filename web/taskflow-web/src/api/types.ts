@@ -102,6 +102,47 @@ export interface Activity {
   createdAt: string
 }
 
+export interface Repository {
+  projectId: string
+  owner: string
+  name: string
+  fullName: string
+  htmlUrl: string
+  defaultBranch: string
+  lastSyncedAt: string | null
+  lastSyncError: string | null
+}
+
+/** Lo que un commit cambió dentro de una carpeta. path "" = raíz del repositorio. */
+export interface FolderChange {
+  path: string
+  files: number
+  additions: number
+  deletions: number
+}
+
+export interface Commit {
+  id: string
+  sha: string
+  title: string
+  /** El resto del mensaje del commit: la explicación larga, si quien lo hizo la escribió. */
+  body: string | null
+  authorName: string
+  authorLogin: string | null
+  authorAvatarUrl: string | null
+  committedAt: string
+  htmlUrl: string
+  additions: number
+  deletions: number
+  filesChanged: number
+  folders: FolderChange[]
+}
+
+export interface SyncResult {
+  imported: number
+  repository: Repository
+}
+
 export interface CursorPage<T> {
   items: T[]
   nextCursor: string | null
