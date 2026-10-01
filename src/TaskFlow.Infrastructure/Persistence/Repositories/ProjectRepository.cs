@@ -21,6 +21,9 @@ internal sealed class ProjectRepository(AppDbContext db) : IProjectRepository
     public Task<bool> ExistsAsync(Guid id, CancellationToken ct) =>
         db.Projects.AnyAsync(p => p.Id == id, ct);
 
+    public Task<bool> KeyPrefixExistsAsync(string keyPrefix, CancellationToken ct) =>
+        db.Projects.AnyAsync(p => p.KeyPrefix == keyPrefix, ct);
+
     public Task<ProjectDto?> GetDtoAsync(Guid id, CancellationToken ct) =>
         db.Projects.AsNoTracking().Where(p => p.Id == id).Select(ToDto).FirstOrDefaultAsync(ct);
 

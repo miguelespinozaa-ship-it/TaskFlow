@@ -22,5 +22,9 @@ internal sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(p => p.WorkspaceId).HasFilter("deleted_at IS NULL");
+
+        // La validación de la app tiene una carrera (dos creaciones simultáneas pasan las dos el "¿ya existe?").
+        // El índice único la cierra. Es parcial: el prefijo de un proyecto borrado se puede volver a usar.
+        builder.HasIndex(p => new { p.WorkspaceId, p.KeyPrefix }).IsUnique().HasFilter("deleted_at IS NULL");
     }
 }
