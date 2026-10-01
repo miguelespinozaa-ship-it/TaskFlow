@@ -2,7 +2,7 @@
 
 > SaaS multi-tenant de gestión de proyectos. ASP.NET Core 10 + React + PostgreSQL.
 
-**Estado:** Fase 2b — modelo completo (comentarios, etiquetas, asignaciones), CRUD, búsqueda full-text con paginación por cursor, soft delete y auditoría.
+**Estado:** Fase 2 completa — API multi-tenant con auth, RBAC, CRUD, búsqueda y auditoría + frontend React con board drag & drop.
 
 ## ✨ Features
 
@@ -27,6 +27,21 @@ Api → Infrastructure → Application → Domain
 - `TaskFlow.Application` — casos de uso, DTOs, validación (FluentValidation), interfaces (`ITenantContext`, repositorios).
 - `TaskFlow.Infrastructure` — EF Core + PostgreSQL, Identity, emisión de tokens, filtro global por tenant.
 - `TaskFlow.Api` — controllers, policies de RBAC, `TenantResolutionMiddleware`, `ProblemDetails` (RFC 9457).
+- `web/taskflow-web` — React 19 + TypeScript + Vite, TanStack Query, Tailwind v4, dnd-kit.
+
+### Frontend
+
+- **Board con drag & drop** (dnd-kit) entre columnas y dentro de una columna, también con teclado
+  (espacio para agarrar, flechas para mover, espacio para soltar; Enter abre el detalle).
+- **Actualización optimista**: la tarjeta queda donde se soltó al instante; si la API rechaza el movimiento
+  se restaura el board y se muestra el error.
+- **Detalle de tarea**: estado, prioridad, asignado, vencimiento, etiquetas, descripción, comentarios e historial.
+- **Búsqueda** full-text con filtros y "cargar más" por cursor; **feed de actividad** legible; **miembros**.
+- Al cambiar de workspace o cerrar sesión se **vacía la cache** de TanStack Query: nunca se pinta, ni por un
+  instante, información del tenant anterior.
+- La UI oculta lo que el rol no permite, pero quien decide es la API (403).
+- **Tema Cyberpunk** (violeta + verde neón) definido como tokens semánticos de Tailwind v4 (`panel`, `line`,
+  `neon`…) y animaciones de entrada, hover y arrastre. Se desactivan con `prefers-reduced-motion`.
 
 Los tests de arquitectura (NetArchTest) fallan si `Domain` o `Application` dependen de EF Core, ASP.NET o capas externas.
 
@@ -44,6 +59,9 @@ dotnet run --project src/TaskFlow.Api          # http://localhost:5080 (crea dat
 cd web/taskflow-web
 npm install && npm run dev                     # http://localhost:5173
 ```
+
+Vite reenvía `/api` a la API (mismo origen: sin CORS y la cookie de refresh viaja sola). Para usar otros
+puertos: `PORT=5174 API_URL=http://localhost:5081 npm run dev`.
 
 Usuarios de demo (workspace "Demo"), contraseña `Demo1234`:
 
