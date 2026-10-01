@@ -1,3 +1,6 @@
+# Dos formas de usarlo:
+#   docker compose up -d postgres            → solo la base, para desarrollar con `dotnet run` y `npm run dev`
+#   docker compose --profile app up --build  → todo el sistema en contenedores, en http://localhost:8080
 services:
   postgres:
     image: postgres:17-alpine
@@ -14,6 +17,43 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  api:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: src/TaskFlow.Api/Dockerfile
+    environment:
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=taskflow;Username=taskflow;Password=taskflow
+      # Sin valor por defecto a propósito: si falta, la API se niega a arrancar (ver .env.example).
+      Jwt__Secret: ${JWT_SECRET:-}
+      Database__MigrateOnStartup: "true"
+      Seed__DemoData: ${SEED_DEMO_DATA:-true}
+      # nginx es el único que llega a la API: se confía en su X-Forwarded-For para limitar intentos por IP real.
+      ForwardedHeaders__Enabled: "true"
+      GitHub__Token: ${GITHUB_TOKEN:-}
+      # Intentos de login/registro por IP y por minuto. Las pruebas de navegador lo suben (todas salen de una IP).
+      RateLimiting__Auth__PermitLimit: ${AUTH_RATE_LIMIT:-10}
+    # Sin "ports": la API no se publica en el host. Solo es alcanzable a través de nginx.
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # La imagen de ASP.NET no trae curl ni wget; bash puede abrir el socket él mismo.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q ' 200 '"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  web:
+    profiles: ["app"]
+    build: ./web/taskflow-web
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
 
 volumes:
   pgdata:

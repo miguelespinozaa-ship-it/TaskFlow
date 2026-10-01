@@ -51,7 +51,7 @@ public static class ObservabilitySetup
     public static void UseTaskFlowRequestLogging(this WebApplication app) =>
         app.UseSerilogRequestLogging(options =>
         {
-            options.MessageTemplate = "{RequestMethod} {RequestPath} → {StatusCode} en {Elapsed:0} ms";
+            options.MessageTemplate = "{RequestMethod:l} {RequestPath:l} → {StatusCode} en {Elapsed:0} ms";
             // Los health checks se consultan cada pocos segundos: a nivel Information taparían todo lo demás.
             options.GetLevel = (http, _, exception) =>
                 exception is not null || http.Response.StatusCode >= 500 ? LogEventLevel.Error

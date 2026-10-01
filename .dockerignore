@@ -1,0 +1,14 @@
+# Lo que no hace falta para construir la imagen de la API (contexto: raíz del repo).
+.git
+.github
+**/bin
+**/obj
+**/node_modules
+**/dist
+TestResults
+docs
+tests
+web
+*.md
+.env
+.env.*
