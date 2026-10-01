@@ -1,8 +1,8 @@
 name: CI
 
+# En cualquier rama: el pipeline se puede ver en verde ANTES de mergear a main.
 on:
   push:
-    branches: [main]
   pull_request:
 
 # Un push nuevo a la misma rama cancela la corrida anterior, que ya no interesa.
