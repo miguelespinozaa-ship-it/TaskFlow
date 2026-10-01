@@ -281,7 +281,7 @@ function TaskForm({
           {labels.map((l) => (
             <LabelChip key={l.id} label={l} active={task.labelIds.includes(l.id)} onClick={canWrite ? () => toggleLabel(l.id) : undefined} />
           ))}
-          {labels.length === 0 && <span className="text-xs text-dim">No hay etiquetas en este workspace.{canWrite && ' Creá la primera acá abajo.'}</span>}
+          {labels.length === 0 && <span className="text-xs text-dim">No hay etiquetas en este workspace.{canWrite && ' Crea la primera aquí abajo.'}</span>}
         </div>
         {canWrite && <NewLabelForm />}
       </section>
@@ -292,7 +292,7 @@ function TaskForm({
           aria-label="Descripción de la tarea"
           value={description}
           disabled={!canWrite}
-          placeholder={canWrite ? 'Agregá detalles…' : 'Sin descripción'}
+          placeholder={canWrite ? 'Agrega detalles…' : 'Sin descripción'}
           // field-sizing: el campo crece con el texto en vez de mostrar un scroll interno.
           className="block w-full leading-relaxed [field-sizing:content]"
           onChange={(e) => setDescription(e.target.value)}
@@ -435,7 +435,7 @@ function Comments({ taskId, user, canWrite, isAdmin }: { taskId: string; user: U
           <Avatar name={user.displayName} size="md" />
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <Textarea
-              placeholder="Escribí un comentario…"
+              placeholder="Escribe un comentario…"
               value={body}
               onChange={(e) => setBody(e.target.value)}
               // Ctrl/⌘ + Enter envía sin soltar el teclado.

@@ -25,7 +25,7 @@ public static class DevDataSeeder
 
         if ((await db.Database.GetPendingMigrationsAsync(ct)).Any())
         {
-            logger.LogWarning("Hay migraciones pendientes; seed omitido. Corré `dotnet ef database update`.");
+            logger.LogWarning("Hay migraciones pendientes; seed omitido. Ejecuta `dotnet ef database update`.");
             return;
         }
 

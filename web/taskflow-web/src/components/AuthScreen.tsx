@@ -10,7 +10,7 @@ const DEMO_ACCOUNTS = [
 ]
 
 const FEATURES: { icon: IconName; title: string; text: string }[] = [
-  { icon: 'board', title: 'Board con drag & drop', text: 'Mové tareas entre columnas con el mouse o el teclado.' },
+  { icon: 'board', title: 'Board con drag & drop', text: 'Mueve tareas entre columnas con el mouse o el teclado.' },
   { icon: 'shield', title: 'Workspaces aislados', text: 'Cada equipo ve solo lo suyo, con roles y permisos.' },
   { icon: 'activity', title: 'Historial de cambios', text: 'Quién cambió qué y cuándo, en cada tarea.' },
 ]
@@ -69,7 +69,7 @@ export function AuthScreen() {
       >
         <div>
           <h2 className="text-xl font-semibold">{mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}</h2>
-          <p className="mt-1 text-sm text-dim">{mode === 'login' ? 'Entrá a tu workspace.' : 'Se crea un workspace personal para vos.'}</p>
+          <p className="mt-1 text-sm text-dim">{mode === 'login' ? 'Entra a tu workspace.' : 'Se crea un workspace personal para ti.'}</p>
         </div>
         {mode === 'register' && (
           <Field label="Nombre">
@@ -77,7 +77,7 @@ export function AuthScreen() {
           </Field>
         )}
         <Field label="Email">
-          <Input type="email" placeholder="vos@empresa.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" autoComplete="email" required />
+          <Input type="email" placeholder="nombre@empresa.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" autoComplete="email" required />
         </Field>
         <Field label="Contraseña" hint={mode === 'register' ? 'Mínimo 8 caracteres, con mayúscula, minúscula y número.' : undefined}>
           <Input
@@ -95,13 +95,13 @@ export function AuthScreen() {
           {busy ? '…' : mode === 'login' ? 'Entrar' : 'Registrarme'}
         </Button>
         <Button type="button" variant="ghost" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
-          {mode === 'login' ? '¿No tenés cuenta? Registrate' : '¿Ya tenés cuenta? Iniciá sesión'}
+          {mode === 'login' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
         </Button>
         {mode === 'login' && (
           <div className="border-t border-line/70 pt-4">
             <p className="mb-2 flex items-center gap-1.5 text-xs text-dim">
               <Icon name="bolt" className="size-3.5 text-amber" />
-              Cuentas de demo — tocá una para completar el formulario
+              Cuentas de demo — toca una para completar el formulario
             </p>
             <div className="grid grid-cols-3 gap-2">
               {DEMO_ACCOUNTS.map((a) => (

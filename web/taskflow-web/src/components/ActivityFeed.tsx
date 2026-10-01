@@ -90,7 +90,7 @@ export function ActivityList({ entityId, compact = false }: { entityId?: string;
       <ErrorText error={error} />
       {items.length === 0 && !error && (
         <Empty compact={compact} icon="activity" title="Sin actividad todavía">
-          {!compact && 'Cada cambio en tareas, proyectos y etiquetas queda registrado acá.'}
+          {!compact && 'Cada cambio en tareas, proyectos y etiquetas queda registrado aquí.'}
         </Empty>
       )}
       <div className="flex flex-col gap-6">

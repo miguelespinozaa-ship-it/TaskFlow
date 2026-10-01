@@ -80,8 +80,8 @@ export function BoardView({ projectId: selected, onSelectProject: setSelected, c
           <div className="rounded-xl border border-dashed border-line bg-panel/40">
             <Empty icon="folder" title="Este workspace no tiene proyectos todavía">
               {canWrite
-                ? 'Creá el primero arriba: un nombre y un prefijo corto (por ejemplo WEB) que identifica a sus tareas.'
-                : 'Cuando alguien del equipo cree uno, lo vas a ver acá.'}
+                ? 'Crea el primero arriba: un nombre y un prefijo corto (por ejemplo WEB) que identifica a sus tareas.'
+                : 'Cuando alguien del equipo cree uno, lo verás aquí.'}
             </Empty>
           </div>
         )

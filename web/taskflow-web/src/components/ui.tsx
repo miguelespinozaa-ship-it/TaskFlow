@@ -196,7 +196,7 @@ export const formatDateTime = (iso: string) =>
 
 export function timeAgo(iso: string) {
   const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000)
-  if (minutes < 1) return 'recién'
+  if (minutes < 1) return 'ahora'
   if (minutes < 60) return `hace ${minutes} min`
   if (minutes < 60 * 24) return `hace ${Math.floor(minutes / 60)} h`
   if (minutes < 60 * 24 * 7) return `hace ${Math.floor(minutes / (60 * 24))} d`

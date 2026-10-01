@@ -47,7 +47,7 @@ public sealed class LinkRepositoryRequestValidator : AbstractValidator<LinkRepos
         RuleFor(x => x.Repository)
             .NotEmpty()
             .Must(r => RepositoryName.TryParse(r, out _))
-            .WithMessage("Usá el formato owner/nombre o la URL del repositorio en GitHub.");
+            .WithMessage("Usa el formato owner/nombre o la URL del repositorio en GitHub.");
 }
 
 public interface IRepositoryService

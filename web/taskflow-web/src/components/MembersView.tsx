@@ -76,7 +76,7 @@ export function MembersView({ isAdmin, currentUserId }: { isAdmin: boolean; curr
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">
                     {m.displayName}
-                    {m.userId === currentUserId && <span className="ml-1.5 font-normal text-dim">(vos)</span>}
+                    {m.userId === currentUserId && <span className="ml-1.5 font-normal text-dim">(tú)</span>}
                   </p>
                   <p className="truncate text-xs text-dim">{m.email}</p>
                 </div>

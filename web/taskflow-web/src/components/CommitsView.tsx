@@ -22,7 +22,7 @@ export function CommitsView({ projectId: selected, onSelectProject, canWrite, is
   if (!project)
     return (
       <Empty icon="folder" title="Este workspace no tiene proyectos todavía">
-        Creá un proyecto en el Board para poder conectarle un repositorio.
+        Crea un proyecto en el Board para poder conectarle un repositorio.
       </Empty>
     )
 
@@ -73,7 +73,7 @@ function ConnectRepository({ project, isAdmin }: { project: Project; isAdmin: bo
     <div className="rounded-xl border border-dashed border-line bg-panel/60 p-6 backdrop-blur-sm">
       <Empty icon="commit" title={`«${project.name}» no tiene un repositorio conectado`} compact>
         {isAdmin
-          ? 'Conectá un repositorio público de GitHub para ver acá cada commit: qué carpetas tocó y la explicación de quien lo hizo.'
+          ? 'Conecta un repositorio público de GitHub para ver aquí cada commit: qué carpetas tocó y la explicación de quien lo hizo.'
           : 'Un Admin u Owner del workspace puede conectar un repositorio de GitHub.'}
       </Empty>
       {isAdmin && (
@@ -186,7 +186,7 @@ function LinkedRepository({ repository, canWrite, isAdmin }: { repository: Repos
         <ListSkeleton rows={5} />
       ) : items.length === 0 ? (
         <Empty icon="commit" title="Todavía no hay commits importados">
-          {repository.lastSyncError ? 'Probá sincronizar de nuevo en un rato.' : 'Cuando haya commits en la rama, van a aparecer acá.'}
+          {repository.lastSyncError ? 'Prueba sincronizar de nuevo en unos minutos.' : 'Cuando haya commits en la rama, aparecerán aquí.'}
         </Empty>
       ) : (
         <ol className="stagger flex flex-col gap-3" aria-label="Commits">

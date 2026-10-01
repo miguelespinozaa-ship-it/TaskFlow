@@ -7,7 +7,7 @@ using TaskFlow.IntegrationTests.Infrastructure;
 
 namespace TaskFlow.IntegrationTests;
 
-/// <summary>El test que demuestra que entendés multi-tenancy: un token de la empresa A no ve nada de B.</summary>
+/// <summary>El test que demuestra que el aislamiento entre tenants funciona: un token de la empresa A no ve nada de B.</summary>
 [Collection(ApiCollection.Name)]
 public sealed class TenantIsolationTests(TaskFlowApiFactory factory) : ApiTestBase(factory)
 {

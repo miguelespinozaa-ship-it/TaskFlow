@@ -87,7 +87,7 @@ export function SearchView({ onOpen }: { onOpen: (taskId: string) => void }) {
         !error && (
           <div className="rounded-xl border border-dashed border-line bg-panel/40">
             <Empty icon="search" title={filtering ? 'No hay tareas que coincidan' : 'Todavía no hay tareas'}>
-              {filtering ? 'Probá con otras palabras o quitá algún filtro.' : 'Las tareas de todos los proyectos del workspace van a aparecer acá.'}
+              {filtering ? 'Prueba con otras palabras o quita algún filtro.' : 'Las tareas de todos los proyectos del workspace aparecerán aquí.'}
             </Empty>
             {filtering && (
               <div className="-mt-6 flex justify-center pb-8">

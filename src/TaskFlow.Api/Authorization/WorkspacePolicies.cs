@@ -4,7 +4,7 @@ using TaskFlow.Domain.Workspaces;
 namespace TaskFlow.Api.Authorization;
 
 /// <summary>
-/// [Authorize] responde "¿quién sos?". Estas policies responden "¿qué podés hacer en ESTE workspace?".
+/// [Authorize] responde "¿quién eres?". Estas policies responden "¿qué puedes hacer en ESTE workspace?".
 /// El claim "role" es el rol en el workspace del token, no un rol global.
 /// </summary>
 public static class WorkspacePolicies

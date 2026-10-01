@@ -24,7 +24,7 @@ import { Avatar, cx, dueInfo, Empty, LabelChip, PriorityBadge, statusStyles, tim
 type Columns = Record<TaskStatus, Task[]>
 
 // Conserva el orden en que llegan (la API ya ordena por columna y posición). No reordenamos por
-// `position` acá: durante un movimiento optimista las posiciones todavía son las viejas.
+// `position` aquí: durante un movimiento optimista las posiciones todavía son las viejas.
 function group(tasks: Task[]): Columns {
   const columns: Columns = { Todo: [], InProgress: [], InReview: [], Done: [] }
   for (const t of tasks) columns[t.status].push(t)
@@ -57,7 +57,7 @@ export function Board({ projectId, keyPrefix, tasks, members, labels, canWrite, 
   }, [tasks, activeId])
 
   const sensors = useSensors(
-    // distance: un click normal abre el detalle; recién a los 5px empieza el arrastre.
+    // distance: un click normal abre el detalle; el arrastre empieza solo a partir de los 5px.
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     // En pantallas táctiles el dedo también hace scroll: se agarra manteniendo apretado un instante.
     useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 6 } }),
@@ -222,7 +222,7 @@ function Column({
           {tasks.length === 0 && (
             <div className={cx('flex flex-1 items-center justify-center rounded-lg border border-dashed transition duration-200', dragging ? 'border-neon/50 bg-neon/5' : 'border-line/60')}>
               <Empty compact icon={status === 'Done' ? 'check' : 'inbox'} title="Sin tareas">
-                {dragging ? 'Soltala acá' : canWrite && 'Arrastrá una tarjeta hasta acá'}
+                {dragging ? 'Suéltala aquí' : canWrite && 'Arrastra una tarjeta hasta aquí'}
               </Empty>
             </div>
           )}
