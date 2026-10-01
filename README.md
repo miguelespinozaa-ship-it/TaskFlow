@@ -14,6 +14,9 @@
 - **Board con fractional indexing**: mover una tarea es un UPDATE de una fila (punto medio entre vecinas);
   cuando se agotan los decimales, la columna se renumera con un único UPDATE.
 - **Búsqueda full-text en español** (columna `tsvector` generada + índice GIN) y **paginación por cursor**.
+- **Integración con GitHub**: cada proyecto se puede conectar a un repositorio público. La app importa los commits
+  y muestra, para cada uno, la explicación (el mensaje del commit) y las **carpetas que tocó** con sus líneas
+  agregadas y quitadas. Sincronización manual y periódica en segundo plano.
 - **Soft delete** con filtro global y **auditoría automática** (tabla `activities` con diff en `jsonb`),
   ambos en `SaveChanges`: ningún caso de uso puede olvidarse de auditar.
 
@@ -101,6 +104,10 @@ Todo requiere `Authorization: Bearer <token>` salvo lo marcado como público.
 | PUT | `/api/v1/tasks/{id}/labels` | Member | `{ labelIds }` |
 | GET / POST | `/api/v1/tasks/{id}/comments` | Viewer / Member | Comentarios |
 | PATCH / DELETE | `/api/v1/comments/{id}` | autor / autor o Admin | Editar / borrar |
+| GET | `/api/v1/projects/{id}/repository` | Viewer | Repositorio conectado (204 si no hay) |
+| PUT / DELETE | `/api/v1/projects/{id}/repository` | Admin | Conectar `{ repository: "owner/nombre" o URL }` / desconectar |
+| POST | `/api/v1/projects/{id}/repository/sync` | Member | Importar commits nuevos |
+| GET | `/api/v1/projects/{id}/commits` | Viewer | Commits con carpetas cambiadas, paginados por cursor |
 | GET / POST | `/api/v1/labels` | Viewer / Member | Etiquetas del workspace |
 | PATCH / DELETE | `/api/v1/labels/{id}` | Admin | Editar / borrar |
 | GET | `/api/v1/activity` · `/api/v1/tasks/{id}/activity` | Viewer | Auditoría paginada por cursor |
@@ -136,7 +143,21 @@ pero firmado con otra clave → 401, paginación que no duplica filas si se inse
 10. **Migraciones reales**, nunca `EnsureCreated`. **Tests de integración contra Postgres real** (Testcontainers).
 11. **xUnit + Shouldly** en vez de FluentAssertions (licencia comercial desde v8).
 
+### GitHub
+
+- **Solo repositorios públicos.** Si el servidor tiene un token, ese token podría ver repos privados de su dueño y
+  cualquier workspace podría enlazarlos; por eso se rechazan, con el mismo mensaje que un repo inexistente.
+- **Límite de la API**: sin token son 60 requests por hora. Cada sincronización importa como mucho 15 commits
+  (uno por request) y usa **consultas condicionales (ETag)**: si no hay commits nuevos, GitHub responde 304 y
+  no descuenta cuota. Con `GitHub__Token` (un token sin permisos alcanza) el límite sube a 5000.
+- El host de la API es fijo y `owner/nombre` se valida con las reglas de GitHub antes de armar la URL.
+- `GitHub__SyncIntervalMinutes` (por defecto 5; 0 lo desactiva) controla el sincronizador de fondo.
+- Si GitHub no responde, la API devuelve 503, el error queda visible en el enlace y lo ya importado sigue disponible.
+
 ## ⚠️ Limitaciones conocidas
+
+- La integración con GitHub consulta periódicamente en vez de recibir webhooks: un commit puede tardar unos
+  minutos en aparecer. Los webhooks necesitan una URL pública y quedan para el deploy.
 
 - Un cambio de rol o una expulsión se aplica al siguiente refresh (máx. 15 min, lo que dura el access token).
   Fase 4: cache de permisos en Redis con invalidación.
