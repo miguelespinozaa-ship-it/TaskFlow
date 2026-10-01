@@ -6,6 +6,7 @@ using TaskFlow.Domain.Auditing;
 using TaskFlow.Domain.Common;
 using TaskFlow.Domain.Labels;
 using TaskFlow.Domain.Projects;
+using TaskFlow.Domain.Repositories;
 using TaskFlow.Domain.Tasks;
 
 namespace TaskFlow.Infrastructure.Persistence;
@@ -25,11 +26,13 @@ internal static class AuditTrail
     private static readonly HashSet<string> IgnoredProperties =
     [
         "Id", nameof(ITenantEntity.WorkspaceId), "CreatedAt", "UpdatedAt", "EditedAt", nameof(ISoftDeletable.DeletedAt),
+        // Estado interno de la sincronización con GitHub: cambia cada pocos minutos y no es una acción de nadie.
+        nameof(RepositoryLink.ETag), nameof(RepositoryLink.LastSyncedAt), nameof(RepositoryLink.LastSyncError),
     ];
 
     // En el snapshot de "created" solo lo que identifica al recurso, no textos largos.
     private static readonly HashSet<string> SnapshotProperties =
-        ["Title", "Name", "Status", "Priority", "KeyPrefix", "Color", "TaskId", "ProjectId", "AssigneeId"];
+        ["Title", "Name", "Status", "Priority", "KeyPrefix", "Color", "TaskId", "ProjectId", "AssigneeId", "Owner"];
 
     public static IEnumerable<Activity> Build(
         ChangeTracker tracker, IReadOnlySet<object> softDeleted, Guid? actorId, DateTime now)
@@ -98,6 +101,7 @@ internal static class AuditTrail
         Project => "project",
         Comment => "comment",
         Label => "label",
+        RepositoryLink => "repository",
         _ => entity.GetType().Name.ToLowerInvariant(),
     };
 

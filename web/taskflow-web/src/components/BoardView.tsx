@@ -6,9 +6,16 @@ import { Icon } from './icons'
 import { toast, useErrorToast } from './toast'
 import { Button, cx, Empty, ErrorText, Input, isOverdue, Select, Skeleton, statusStyles } from './ui'
 
-export function BoardView({ canWrite, onOpen }: { canWrite: boolean; onOpen: (taskId: string) => void }) {
+interface Props {
+  /** El proyecto elegido vive en el shell: se mantiene al pasar a la pestaña Commits y volver. */
+  projectId: string | undefined
+  onSelectProject: (id: string) => void
+  canWrite: boolean
+  onOpen: (taskId: string) => void
+}
+
+export function BoardView({ projectId: selected, onSelectProject: setSelected, canWrite, onOpen }: Props) {
   const projects = useProjects()
-  const [selected, setSelected] = useState<string>()
   const projectId = selected ?? projects.data?.[0]?.id
   const project = projects.data?.find((p) => p.id === projectId)
   const board = useBoard(projectId)

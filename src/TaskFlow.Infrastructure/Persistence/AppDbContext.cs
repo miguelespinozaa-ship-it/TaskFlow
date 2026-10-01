@@ -7,6 +7,7 @@ using TaskFlow.Domain.Auditing;
 using TaskFlow.Domain.Common;
 using TaskFlow.Domain.Labels;
 using TaskFlow.Domain.Projects;
+using TaskFlow.Domain.Repositories;
 using TaskFlow.Domain.Tasks;
 using TaskFlow.Domain.Workspaces;
 using TaskFlow.Infrastructure.Identity;
@@ -68,6 +69,8 @@ public sealed class AppDbContext : IdentityUserContext<ApplicationUser, Guid>, I
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<Label> Labels => Set<Label>();
     public DbSet<Activity> Activities => Set<Activity>();
+    public DbSet<RepositoryLink> RepositoryLinks => Set<RepositoryLink>();
+    public DbSet<RepositoryCommit> RepositoryCommits => Set<RepositoryCommit>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

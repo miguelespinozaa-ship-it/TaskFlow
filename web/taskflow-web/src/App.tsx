@@ -6,6 +6,7 @@ import type { AuthResponse, WorkspaceRole } from './api/types'
 import { ActivityList } from './components/ActivityFeed'
 import { AuthScreen } from './components/AuthScreen'
 import { BoardView } from './components/BoardView'
+import { CommitsView } from './components/CommitsView'
 import { MembersView } from './components/MembersView'
 import { SearchView } from './components/SearchView'
 import { TaskDetail } from './components/TaskDetail'
@@ -54,10 +55,11 @@ export default function App() {
   )
 }
 
-type Tab = 'board' | 'search' | 'activity' | 'members'
+type Tab = 'board' | 'commits' | 'search' | 'activity' | 'members'
 
 const TABS: { id: Tab; label: string; icon: IconName }[] = [
   { id: 'board', label: 'Board', icon: 'board' },
+  { id: 'commits', label: 'Commits', icon: 'commit' },
   { id: 'search', label: 'Buscar', icon: 'search' },
   { id: 'activity', label: 'Actividad', icon: 'activity' },
   { id: 'members', label: 'Miembros', icon: 'users' },
@@ -68,6 +70,7 @@ const roleLabels: Record<WorkspaceRole, string> = { Owner: 'Owner', Admin: 'Admi
 function Shell({ session }: { session: AuthResponse }) {
   const [tab, setTab] = useState<Tab>('board')
   const [openTaskId, setOpenTaskId] = useState<string | null>(null)
+  const [projectId, setProjectId] = useState<string>()
   const { data: workspaces } = useWorkspaces()
   const role = session.workspace.role
   const canWrite = role !== 'Viewer' // la UI solo oculta; quien decide es la API (403)
@@ -159,7 +162,10 @@ function Shell({ session }: { session: AuthResponse }) {
 
       {/* key: cada cambio de pestaña vuelve a montar el contenido y dispara la animación de entrada. */}
       <main key={tab} className="mx-auto max-w-7xl animate-rise px-4 py-5">
-        {tab === 'board' && <BoardView canWrite={canWrite} onOpen={openTask} />}
+        {tab === 'board' && <BoardView projectId={projectId} onSelectProject={setProjectId} canWrite={canWrite} onOpen={openTask} />}
+        {tab === 'commits' && (
+          <CommitsView projectId={projectId} onSelectProject={setProjectId} canWrite={canWrite} isAdmin={isAdmin} />
+        )}
         {tab === 'search' && <SearchView onOpen={openTask} />}
         {tab === 'activity' && <ActivityList />}
         {tab === 'members' && <MembersView isAdmin={isAdmin} currentUserId={session.user.id} />}

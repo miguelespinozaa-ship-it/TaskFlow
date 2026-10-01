@@ -5,6 +5,7 @@ using TaskFlow.Application.Comments;
 using TaskFlow.Application.Common;
 using TaskFlow.Application.Labels;
 using TaskFlow.Application.Projects;
+using TaskFlow.Application.Repositories;
 using TaskFlow.Application.Tasks;
 using TaskFlow.Application.Workspaces;
 
@@ -24,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<ILabelService, LabelService>();
         services.AddScoped<ICommentService, CommentService>();
         services.AddScoped<IActivityService, ActivityService>();
+        services.AddScoped<IRepositoryService, RepositoryService>();
         return services;
     }
 }
