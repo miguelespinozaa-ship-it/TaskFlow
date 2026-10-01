@@ -4,7 +4,8 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useDroppable,
   useSensor,
   useSensors,
@@ -16,7 +17,9 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from '@dnd-kit/utilities'
 import { useMoveTask } from '../api/queries'
 import { STATUSES, type Label, type Member, type Task, type TaskStatus } from '../api/types'
-import { Avatar, cx, Empty, formatDate, LabelChip, PriorityBadge } from './ui'
+import { Icon } from './icons'
+import { useErrorToast } from './toast'
+import { Avatar, cx, dueInfo, Empty, LabelChip, PriorityBadge, statusStyles, timeAgo } from './ui'
 
 type Columns = Record<TaskStatus, Task[]>
 
@@ -55,7 +58,9 @@ export function Board({ projectId, keyPrefix, tasks, members, labels, canWrite, 
 
   const sensors = useSensors(
     // distance: un click normal abre el detalle; recién a los 5px empieza el arrastre.
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    // En pantallas táctiles el dedo también hace scroll: se agarra manteniendo apretado un instante.
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 6 } }),
     // Accesible: espacio para agarrar, flechas para mover, espacio para soltar.
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
@@ -132,6 +137,7 @@ export function Board({ projectId, keyPrefix, tasks, members, labels, canWrite, 
   }
 
   const active = activeId ? tasks.find((t) => t.id === activeId) : undefined
+  useErrorToast(move.error, 'No se pudo mover la tarea (se restauró el board)')
 
   return (
     <DndContext
@@ -146,14 +152,16 @@ export function Board({ projectId, keyPrefix, tasks, members, labels, canWrite, 
         setColumns(group(tasks))
       }}
     >
-      {move.isError && (
-        <p role="alert" className="mb-2 animate-shake text-sm text-hot">
-          No se pudo mover la tarea: {move.error.message}. Se restauró el board.
-        </p>
-      )}
-      <div className="stagger grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      {/* En móvil las columnas van en fila con scroll horizontal; desde md, en grilla. El snap se apaga
+          mientras se arrastra para que no pelee con el auto-scroll de dnd-kit. */}
+      <div
+        className={cx(
+          'stagger -mx-4 flex items-start gap-3 overflow-x-auto px-4 pb-3 md:mx-0 md:grid md:grid-cols-2 md:items-stretch md:overflow-visible md:px-0 md:pb-0 xl:grid-cols-4',
+          !activeId && 'snap-x snap-mandatory scroll-px-4',
+        )}
+      >
         {STATUSES.map(({ value, label }) => (
-          <Column key={value} status={value} label={label} tasks={columns[value]} highlighted={overStatus === value}>
+          <Column key={value} status={value} label={label} tasks={columns[value]} highlighted={overStatus === value} dragging={!!activeId} canWrite={canWrite}>
             {columns[value].map((task) => (
               <SortableCard key={task.id} task={task} disabled={!canWrite} onOpen={onOpen}>
                 <CardBody task={task} keyPrefix={keyPrefix} membersById={membersById} labelsById={labelsById} />
@@ -164,7 +172,7 @@ export function Board({ projectId, keyPrefix, tasks, members, labels, canWrite, 
       </div>
       <DragOverlay>
         {active && (
-          <div className="scale-105 rotate-2 cursor-grabbing rounded-md border border-neon bg-raised p-3 shadow-neon">
+          <div className={cx('scale-105 rotate-2 cursor-grabbing border-neon shadow-lift', cardBase, priorityEdge[active.priority])}>
             <CardBody task={active} keyPrefix={keyPrefix} membersById={membersById} labelsById={labelsById} />
           </div>
         )}
@@ -178,38 +186,60 @@ function Column({
   label,
   tasks,
   highlighted,
+  dragging,
+  canWrite,
   children,
 }: {
   status: TaskStatus
   label: string
   tasks: Task[]
   highlighted: boolean
+  dragging: boolean
+  canWrite: boolean
   children: React.ReactNode
 }) {
   // Droppable propio: sin él no se puede soltar en una columna vacía.
   const { setNodeRef } = useDroppable({ id: status })
+  const tone = statusStyles[status]
   return (
     <section
       ref={setNodeRef}
       aria-label={label}
       className={cx(
-        'flex min-h-48 flex-col rounded-lg border bg-panel/70 p-2 backdrop-blur-sm transition duration-200',
+        'flex min-h-40 w-[82vw] max-w-sm shrink-0 snap-start flex-col rounded-xl border border-t-2 p-2 backdrop-blur-sm transition duration-200 md:min-h-[26rem] md:w-auto md:max-w-none',
         // Al arrastrar una tarjeta encima, la columna "se enciende".
-        highlighted ? 'animate-glow border-neon bg-neon/5' : 'border-line',
+        highlighted ? 'animate-glow border-neon bg-neon/5' : cx('border-line/70 bg-panel/45', tone.edge),
       )}
     >
-      <h2 className="mb-2 flex items-center justify-between px-1 font-display text-xs font-semibold tracking-widest text-mint uppercase">
+      <h2 className="mb-2 flex items-center gap-2 px-1.5 pt-1 font-display text-xs font-semibold tracking-widest text-ink uppercase">
+        <span className={cx('size-2 rounded-full', tone.dot)} />
         {label}
-        <span key={tasks.length} className="animate-pop rounded-full bg-raised px-2 py-0.5 text-xs font-normal tracking-normal text-ink">{tasks.length}</span>
+        <span key={tasks.length} className="ml-auto min-w-6 animate-pop rounded-full bg-raised px-2 py-0.5 text-center text-xs font-normal tracking-normal text-dim">{tasks.length}</span>
       </h2>
       <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
         <div className="flex flex-1 flex-col gap-2">
           {children}
-          {tasks.length === 0 && <Empty>Sin tareas</Empty>}
+          {tasks.length === 0 && (
+            <div className={cx('flex flex-1 items-center justify-center rounded-lg border border-dashed transition duration-200', dragging ? 'border-neon/50 bg-neon/5' : 'border-line/60')}>
+              <Empty compact icon={status === 'Done' ? 'check' : 'inbox'} title="Sin tareas">
+                {dragging ? 'Soltala acá' : canWrite && 'Arrastrá una tarjeta hasta acá'}
+              </Empty>
+            </div>
+          )}
         </div>
       </SortableContext>
     </section>
   )
+}
+
+const cardBase = 'rounded-lg border border-l-[3px] bg-raised/80 p-3 shadow-card'
+
+// El borde izquierdo de la tarjeta lleva el color de la prioridad: se lee la columna de un vistazo.
+const priorityEdge: Record<Task['priority'], string> = {
+  Low: 'border-l-line',
+  Medium: 'border-l-violet',
+  High: 'border-l-amber',
+  Urgent: 'border-l-hot',
 }
 
 function SortableCard({ task, disabled, onOpen, children }: { task: Task; disabled: boolean; onOpen: (id: string) => void; children: React.ReactNode }) {
@@ -235,10 +265,14 @@ function SortableCard({ task, disabled, onOpen, children }: { task: Task; disabl
         } else listeners?.onKeyDown?.(e)
       }}
       data-testid="task-card"
+      data-task-id={task.id}
       aria-label={task.title}
       className={cx(
-        'animate-rise cursor-grab rounded-md border border-line bg-raised/80 p-3 shadow-card transition duration-200',
-        'hover:-translate-y-0.5 hover:border-neon hover:shadow-neon focus-visible:border-neon focus-visible:shadow-neon focus-visible:outline-none',
+        cardBase,
+        // touch-manipulation + select-none: mantener apretado agarra la tarjeta en vez de seleccionar texto.
+        'animate-rise cursor-grab touch-manipulation border-line transition duration-200 select-none [-webkit-touch-callout:none]',
+        'hover:-translate-y-0.5 hover:border-neon hover:shadow-lift focus-visible:border-neon focus-visible:shadow-lift focus-visible:outline-none',
+        priorityEdge[task.priority],
         disabled && 'cursor-pointer',
         // El hueco que deja la tarjeta mientras se arrastra: contorno punteado.
         isDragging && 'border-dashed border-violet opacity-40 shadow-none',
@@ -261,25 +295,50 @@ function CardBody({
   labelsById: Map<string, Label>
 }) {
   const assignee = task.assigneeId ? membersById.get(task.assigneeId) : undefined
-  const overdue = task.dueAt && task.status !== 'Done' && new Date(task.dueAt) < new Date()
+  const done = task.status === 'Done'
+  const due = task.dueAt ? dueInfo(task.dueAt, done) : undefined
   return (
     <>
       <div className="flex items-center justify-between gap-2">
-        <span className="font-display text-xs text-violet">{keyPrefix}</span>
+        <span className="inline-flex items-center gap-1 font-display text-xs text-violet">
+          {done && <Icon name="check" className="size-3.5 text-neon" />}
+          {keyPrefix}
+        </span>
         <PriorityBadge priority={task.priority} />
       </div>
-      <h3 className="mt-1 text-sm font-medium text-ink">{task.title}</h3>
+      <h3 className={cx('mt-1.5 text-sm leading-snug font-medium break-words', done ? 'text-dim' : 'text-ink')}>{task.title}</h3>
       {task.labelIds.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {task.labelIds.map((id) => labelsById.get(id)).filter(Boolean).map((l) => <LabelChip key={l!.id} label={l!} />)}
         </div>
       )}
-      {(assignee || task.dueAt) && (
-        <div className="mt-2 flex items-center justify-between text-xs text-dim">
-          {task.dueAt ? <span className={cx(overdue && 'font-medium text-hot')}>Vence {formatDate(task.dueAt)}</span> : <span />}
-          {assignee && <Avatar name={assignee.displayName} />}
-        </div>
-      )}
+      <div className="mt-2.5 flex items-center gap-2.5 border-t border-line/50 pt-2 text-xs text-dim">
+        {due ? (
+          <span className={cx('inline-flex items-center gap-1', due.tone)}>
+            <Icon name="calendar" className="size-3.5" />
+            {due.text}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1" title="Última actualización">
+            <Icon name="clock" className="size-3.5" />
+            {timeAgo(task.updatedAt)}
+          </span>
+        )}
+        {task.description && (
+          <span title="Tiene descripción">
+            <Icon name="text" className="size-3.5" />
+          </span>
+        )}
+        <span className="ml-auto">
+          {assignee ? (
+            <Avatar name={assignee.displayName} />
+          ) : (
+            <span title="Sin asignar" className="flex size-6 items-center justify-center rounded-full border border-dashed border-line text-dim/70">
+              <Icon name="user" className="size-3" />
+            </span>
+          )}
+        </span>
+      </div>
     </>
   )
 }
